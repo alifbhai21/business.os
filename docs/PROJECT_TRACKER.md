@@ -30,7 +30,7 @@
 - [ ] Phase 02 — Authentication & Security — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [ ] Phase 03 — Business & Shops — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [ ] Phase 04 — Products, Customers & Suppliers — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
-- [ ] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION IN PROGRESS (05.01–05.07 VERIFIED; 230/230 TESTS)
+- [ ] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION IN PROGRESS (05.01–05.08 VERIFIED; 276/276 TESTS)
 - [ ] Phase 06 — Inventory, Returns & Transfers
 - [ ] Phase 07 — Double-Entry Accounting Engine
 - [ ] Phase 08 — Dashboard & Reports
@@ -345,6 +345,23 @@
 
 ## Phase 05 — Sales, Purchases & Payments
 
+> **Phase 05.08 Purchase VERIFIED (2026-08-20):** Purchase model (embedded PurchaseItem) + purchase service/controller/routes/schemas mounted at
+> `/api/v1/purchases` (`POST /`, `GET /`, `GET /:id`, `POST /:id/finalize`). Recovered from an interrupted session — all files already existed and the
+> re-run baseline was green, so no 05.08 code was rewritten; the gap was test coverage (38 → 46 tests). StockMovement, BusinessCounter, journal,
+> account and transaction infrastructure are reused unchanged. DRAFT purchases carry server-computed totals with no stock or financial effect;
+> finalization is a single `withTransaction` covering atomic numbering (`PUR-<fiscalYear>-<branchCode>-<sequence>`, counter key `PURCHASE`), stock
+> increment, weighted-average cost recalculation, StockMovement, supplier payable, guarded account decrement, Purchase completion, balanced journal
+> and audit. avgCost = (oldStock × oldAvgCost + line costAmount) / (oldStock + qty), divided once and rounded to integer paisa; zero prior stock
+> collapses to the purchase's own unit cost. Header discounts are allocated pro-rata into each line's cost basis and `discountAmount` is derived back
+> from Σ costAmount, so the journal balances by construction. Journal: DEBIT Inventory + Tax Receivable (new ASSET concept) / CREDIT cash-bank +
+> Supplier Payable, debit total === credit total. `Supplier.currentPayable` moves by `dueAmount` only — no duplicate Payment document for money paid
+> at purchase time. Idempotent on duplicate finalize (draft and inline-COMPLETED paths), concurrent finalize and repeated `localId`. Three rollback
+> proofs: insufficient balance, a two-line finalize whose second product went INACTIVE, and an invoiceNo unique-index collision that fails AFTER the
+> account decrement. RBAC Owner/Admin/Manager/Inventory Manager at route + service level (Viewer 403, Salesperson 403).
+> Cross-tenant/cross-shop/foreign-supplier/foreign-product/foreign-account all 404. Zod `.strict()` rejects 19 spoof/malformed payloads.
+> Known gaps: void/reversal is 05.09, no `/purchases/:id/payments` sub-resource, no landed-cost apportionment, no mobile screens (05.12).
+> 46 purchase tests pass; full suite 276/276; npm test exits 0; backend typecheck 0 errors; mobile typecheck 0 errors.
+
 > **Phase 05.07 Sale VERIFIED (2026-08-20):** Sale + StockMovement models, sale service/controller/routes/schemas mounted at `/api/v1/sales`
 > (`POST /`, `GET /`, `GET /:id`, `POST /:id/finalize`). DRAFT sales carry server-computed totals with no stock or financial effect; finalization is a
 > single `withTransaction` covering atomic invoice numbering (BusinessCounter — never `countDocuments()+1`), guarded stock decrement, StockMovement,
@@ -378,8 +395,8 @@
 
 - [x] Create Sale model (embedded items, totals, paymentStatus)
 - [x] Create SaleItem embedded schema
-- [ ] Create Purchase model (embedded items, totals, paymentStatus)
-- [ ] Create PurchaseItem embedded schema
+- [x] Create Purchase model (embedded items, totals, paymentStatus)
+- [x] Create PurchaseItem embedded schema
 - [x] Create Payment model (type, amount, method, account, reference, idempotencyKey)
 - [x] Create Expense model (category, amount, paymentAccount, note, receiptUrl)
 - [x] Create Account model (name, type: cash/bank/bkash/nagad/rocket, balance)
@@ -390,9 +407,9 @@
 - [x] Create sale service (transaction: sale + stock + customer due + cash + journal)
 - [x] Create sale controller
 - [x] Create sale routes
-- [ ] Create purchase service (transaction: purchase + stock + supplier payable + cash + journal)
-- [ ] Create purchase controller
-- [ ] Create purchase routes
+- [x] Create purchase service (transaction: purchase + stock + supplier payable + cash + journal)
+- [x] Create purchase controller
+- [x] Create purchase routes
 - [x] Create payment service
 - [x] Create payment routes
 - [x] Create expense service
@@ -404,7 +421,7 @@
 - [x] Server-side total recalculation
 - [x] Stock guard (atomic $inc + currentStock >= qty filter)
 - [x] Idempotency (unique stock movement key per ref + product)
-- [ ] Average cost recalculation on purchase
+- [x] Average cost recalculation on purchase
 - [x] Sale: UNPAID/PARTIAL/PAID status
 
 ### API
@@ -413,10 +430,10 @@
 - [x] `POST /api/v1/sales/:id/finalize`
 - [ ] `POST /api/v1/sales/:id/cancel`
 - [x] `GET /api/v1/sales/:id`
-- [ ] `POST/GET /api/v1/purchases`
-- [ ] `POST /api/v1/purchases/:id/finalize`
+- [x] `POST/GET /api/v1/purchases`
+- [x] `POST /api/v1/purchases/:id/finalize`
 - [ ] `POST /api/v1/purchases/:id/cancel`
-- [ ] `GET /api/v1/purchases/:id`
+- [x] `GET /api/v1/purchases/:id`
 - [x] `POST/GET /api/v1/payments`
 - [x] `POST/GET /api/v1/expenses`
 - [x] `GET/POST /api/v1/accounts`
@@ -449,8 +466,8 @@
 - [x] Partial payment sale test
 - [x] Insufficient stock rejection test
 - [x] Duplicate finalize idempotency test
-- [ ] Purchase stock increase test
-- [ ] Purchase average cost test
+- [x] Purchase stock increase test
+- [x] Purchase average cost test
 - [x] Customer payment due reduction test
 - [x] Supplier payment payable reduction test
 - [x] Expense cash deduction test
@@ -460,7 +477,7 @@
 ### Acceptance Criteria
 
 - [x] Sale creates invoice + stock decrease + customer due + cash + journal
-- [ ] Purchase creates invoice + stock increase + supplier payable + cash + journal
+- [x] Purchase creates invoice + stock increase + supplier payable + cash + journal
 - [x] Payment reduces due/payable + updates account
 - [x] Expense reduces account
 - [x] All calculations server-side

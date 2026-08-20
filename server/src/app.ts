@@ -19,6 +19,7 @@ import accountRoutes from "./routes/account.routes";
 import paymentRoutes from "./routes/payment.routes";
 import expenseRoutes from "./routes/expense.routes";
 import saleRoutes from "./routes/sale.routes";
+import purchaseRoutes from "./routes/purchase.routes";
 
 const env = loadEnv();
 
@@ -75,6 +76,7 @@ app.use("/api/v1/accounts", accountRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/expenses", expenseRoutes);
 app.use("/api/v1/sales", saleRoutes);
+app.use("/api/v1/purchases", purchaseRoutes);
 
 // --- 404 ---
 app.use((_req: Request, _res: Response, next: NextFunction) => {

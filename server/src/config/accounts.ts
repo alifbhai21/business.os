@@ -49,6 +49,7 @@ export const JOURNAL_ACCOUNTS = {
   CUSTOMER_RECEIVABLE: "Customer Receivable",
   SUPPLIER_PAYABLE: "Supplier Payable",
   TAX_PAYABLE: "Tax Payable",
+  TAX_RECEIVABLE: "Tax Receivable",
 } as const;
 export type JournalAccountName = (typeof JOURNAL_ACCOUNTS)[keyof typeof JOURNAL_ACCOUNTS];
 
@@ -62,6 +63,9 @@ export const JOURNAL_ACCOUNT_TYPES = {
   [JOURNAL_ACCOUNTS.CUSTOMER_RECEIVABLE]: "ASSET",
   [JOURNAL_ACCOUNTS.SUPPLIER_PAYABLE]: "LIABILITY",
   [JOURNAL_ACCOUNTS.TAX_PAYABLE]: "LIABILITY",
+  // Input tax paid to suppliers is recoverable — an asset, the mirror of the
+  // output tax collected on sales (TAX_PAYABLE).
+  [JOURNAL_ACCOUNTS.TAX_RECEIVABLE]: "ASSET",
   [JOURNAL_ACCOUNTS.SALES_REVENUE]: "REVENUE",
 } as const;
 export type JournalAccountType =
