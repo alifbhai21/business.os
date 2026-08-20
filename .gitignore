@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+*.expo.go
+
+# Native build artifacts
+android/
+ios/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Testing
+coverage/
+
+# Temporary
+*.tmp
+*.temp
+
+# Legacy duplicate of root mobile/ + server/ (preserved as reference; root is canonical)
+/business-os/
