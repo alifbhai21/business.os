@@ -30,7 +30,7 @@
 - [ ] Phase 02 — Authentication & Security — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [ ] Phase 03 — Business & Shops — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [ ] Phase 04 — Products, Customers & Suppliers — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
-- [ ] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION IN PROGRESS (05.01–05.06 VERIFIED; 193/193 TESTS)
+- [ ] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION IN PROGRESS (05.01–05.07 VERIFIED; 230/230 TESTS)
 - [ ] Phase 06 — Inventory, Returns & Transfers
 - [ ] Phase 07 — Double-Entry Accounting Engine
 - [ ] Phase 08 — Dashboard & Reports
@@ -345,6 +345,19 @@
 
 ## Phase 05 — Sales, Purchases & Payments
 
+> **Phase 05.07 Sale VERIFIED (2026-08-20):** Sale + StockMovement models, sale service/controller/routes/schemas mounted at `/api/v1/sales`
+> (`POST /`, `GET /`, `GET /:id`, `POST /:id/finalize`). DRAFT sales carry server-computed totals with no stock or financial effect; finalization is a
+> single `withTransaction` covering atomic invoice numbering (BusinessCounter — never `countDocuments()+1`), guarded stock decrement, StockMovement,
+> customer due, account credit, Sale completion, balanced journal and audit. Totals/tax/costPrice are recomputed server-side and the `.strict()` Zod
+> schema rejects any client attempt to send them. Journal: DEBIT cash/bank + Customer Receivable / CREDIT Sales Revenue + Tax Payable, debit total ===
+> credit total. `allowNegativeStock` honoured both ways; walk-in sales supported (a walk-in due is rejected); overpayment rejected. Idempotent on
+> duplicate finalize and on repeated `localId`. Rollback proven with a two-line sale whose second line lacks stock. RBAC Owner/Admin/Manager/Salesperson
+> at route + service level (Viewer 403, Accountant 403). Cross-tenant/cross-shop/foreign-product/foreign-customer all 404. List paginated with
+> status/paymentStatus/customer/date filters.
+> Invoice format is `INV-<fiscalYear>-<branchCode>-<sequence>` — the per-shop counter would otherwise collide on the business-wide unique index.
+> Known gaps: no COGS/Inventory journal leg (Phase 07), creditLimit not enforced, void is 05.09, no mobile screens.
+> 37 sale tests pass; full suite 230/230; npm test exits 0; backend typecheck 0 errors; mobile typecheck 0 errors.
+
 > **Phase 05.06 Expense VERIFIED (2026-08-20):** Expense model/service/controller/routes/schemas mounted at `/api/v1/expenses`.
 > Categories reuse the existing `EXPENSE_CATEGORIES` config (no second enum). Journal is DEBIT `Expense:<category>` (EXPENSE) / CREDIT the
 > canonical asset account for the payment account type (`journalAssetAccountFor`), debit total === credit total asserted.
@@ -363,8 +376,8 @@
 
 ### Database
 
-- [ ] Create Sale model (embedded items, totals, paymentStatus)
-- [ ] Create SaleItem embedded schema
+- [x] Create Sale model (embedded items, totals, paymentStatus)
+- [x] Create SaleItem embedded schema
 - [ ] Create Purchase model (embedded items, totals, paymentStatus)
 - [ ] Create PurchaseItem embedded schema
 - [x] Create Payment model (type, amount, method, account, reference, idempotencyKey)
@@ -374,9 +387,9 @@
 
 ### Backend
 
-- [ ] Create sale service (transaction: sale + stock + customer due + cash + journal)
-- [ ] Create sale controller
-- [ ] Create sale routes
+- [x] Create sale service (transaction: sale + stock + customer due + cash + journal)
+- [x] Create sale controller
+- [x] Create sale routes
 - [ ] Create purchase service (transaction: purchase + stock + supplier payable + cash + journal)
 - [ ] Create purchase controller
 - [ ] Create purchase routes
@@ -387,19 +400,19 @@
 - [x] Create account service
 - [x] Create account routes
 - [ ] Create invoice serializer
-- [ ] Money as integer paisa (BigInt-safe)
-- [ ] Server-side total recalculation
-- [ ] Stock guard (atomic $inc + $expr)
-- [ ] Idempotency (unique stock movement key per ref)
+- [x] Money as integer paisa (BigInt-safe)
+- [x] Server-side total recalculation
+- [x] Stock guard (atomic $inc + currentStock >= qty filter)
+- [x] Idempotency (unique stock movement key per ref + product)
 - [ ] Average cost recalculation on purchase
-- [ ] Sale: UNPAID/PARTIAL/PAID status
+- [x] Sale: UNPAID/PARTIAL/PAID status
 
 ### API
 
-- [ ] `POST/GET /api/v1/sales`
-- [ ] `POST /api/v1/sales/:id/finalize`
+- [x] `POST/GET /api/v1/sales`
+- [x] `POST /api/v1/sales/:id/finalize`
 - [ ] `POST /api/v1/sales/:id/cancel`
-- [ ] `GET /api/v1/sales/:id`
+- [x] `GET /api/v1/sales/:id`
 - [ ] `POST/GET /api/v1/purchases`
 - [ ] `POST /api/v1/purchases/:id/finalize`
 - [ ] `POST /api/v1/purchases/:id/cancel`
@@ -431,22 +444,22 @@
 
 ### Testing
 
-- [ ] Cash sale test
-- [ ] Credit sale test
-- [ ] Partial payment sale test
-- [ ] Insufficient stock rejection test
-- [ ] Duplicate finalize idempotency test
+- [x] Cash sale test
+- [x] Credit sale test
+- [x] Partial payment sale test
+- [x] Insufficient stock rejection test
+- [x] Duplicate finalize idempotency test
 - [ ] Purchase stock increase test
 - [ ] Purchase average cost test
 - [x] Customer payment due reduction test
 - [x] Supplier payment payable reduction test
 - [x] Expense cash deduction test
-- [ ] Cross-business isolation test
-- [ ] Unauthorized rejection test
+- [x] Cross-business isolation test
+- [x] Unauthorized rejection test
 
 ### Acceptance Criteria
 
-- [ ] Sale creates invoice + stock decrease + customer due + cash + journal
+- [x] Sale creates invoice + stock decrease + customer due + cash + journal
 - [ ] Purchase creates invoice + stock increase + supplier payable + cash + journal
 - [x] Payment reduces due/payable + updates account
 - [x] Expense reduces account

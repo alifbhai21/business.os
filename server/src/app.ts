@@ -18,6 +18,7 @@ import unitsRoutes from "./routes/units.routes";
 import accountRoutes from "./routes/account.routes";
 import paymentRoutes from "./routes/payment.routes";
 import expenseRoutes from "./routes/expense.routes";
+import saleRoutes from "./routes/sale.routes";
 
 const env = loadEnv();
 
@@ -73,6 +74,7 @@ app.use("/api/v1/units", unitsRoutes);
 app.use("/api/v1/accounts", accountRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/expenses", expenseRoutes);
+app.use("/api/v1/sales", saleRoutes);
 
 // --- 404 ---
 app.use((_req: Request, _res: Response, next: NextFunction) => {

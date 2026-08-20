@@ -48,6 +48,7 @@ export const JOURNAL_ACCOUNTS = {
   INVENTORY: "Inventory",
   CUSTOMER_RECEIVABLE: "Customer Receivable",
   SUPPLIER_PAYABLE: "Supplier Payable",
+  TAX_PAYABLE: "Tax Payable",
 } as const;
 export type JournalAccountName = (typeof JOURNAL_ACCOUNTS)[keyof typeof JOURNAL_ACCOUNTS];
 
@@ -60,6 +61,7 @@ export const JOURNAL_ACCOUNT_TYPES = {
   [JOURNAL_ACCOUNTS.INVENTORY]: "ASSET",
   [JOURNAL_ACCOUNTS.CUSTOMER_RECEIVABLE]: "ASSET",
   [JOURNAL_ACCOUNTS.SUPPLIER_PAYABLE]: "LIABILITY",
+  [JOURNAL_ACCOUNTS.TAX_PAYABLE]: "LIABILITY",
   [JOURNAL_ACCOUNTS.SALES_REVENUE]: "REVENUE",
 } as const;
 export type JournalAccountType =
