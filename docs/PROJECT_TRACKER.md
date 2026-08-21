@@ -30,7 +30,7 @@
 - [ ] Phase 02 — Authentication & Security — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [ ] Phase 03 — Business & Shops — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [ ] Phase 04 — Products, Customers & Suppliers — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
-- [ ] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION IN PROGRESS (05.01–05.08 VERIFIED; 276/276 TESTS)
+- [ ] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION COMPLETE (05.01–05.13 VERIFIED; 412/412 TESTS)
 - [ ] Phase 06 — Inventory, Returns & Transfers
 - [ ] Phase 07 — Double-Entry Accounting Engine
 - [ ] Phase 08 — Dashboard & Reports
@@ -345,6 +345,41 @@
 
 ## Phase 05 — Sales, Purchases & Payments
 
+> **Phase 05.13 Offline sync + device identity VERIFIED (2026-08-21):** Expense offline retries are now idempotent — the unique partial index on
+> `{businessId, localId}`, in-transaction deduplication and duplicate-key recovery mean a retried offline expense returns the ORIGINAL record
+> (`duplicate: true`) instead of deducting the account twice. Device identity is snapshotted from the VERIFIED JWT claims (`req.user.deviceId`),
+> never the request body — the Zod `.strict()` schemas reject a client-supplied deviceId outright. This closes a real security gap: the interrupted
+> session had only wired deviceId-from-JWT into the Expense controller; Sale, Purchase, Payment and the settlement sub-resources still passed
+> `req.body` directly, so a client could impersonate any device. All four now derive deviceId from the token, and `payment.service.ts` /
+> `purchase.service.ts` persist it (the models already had the field). 8 new Expense offline-sync tests (first localId, duplicate retry, concurrent
+> duplicate, different localId, conflicting payload, business-scoped uniqueness, deviceId-from-token, retry-after-failure) plus one deviceId
+> security test each for Sale and Purchase. Full suite 412/412; npm test exits 0; backend typecheck 0 errors; mobile typecheck 0 errors.
+
+> **Phase 05.12 Mobile screens VERIFIED (2026-08-21):** The Phase 05 transaction screens were entirely missing from the mobile app. Added a
+> Transactions hub (Sales/Purchases/Payments/Accounts/Expenses) wired into the Home tab bar, with full list + create flows for each. Every screen
+> uses the established `authRequest` + `useAuth` + `useI18n` + `formatTaka` patterns, has loading/error/empty/success states, validates before
+> submit, and never sends server-owned financial values (balance, due, payable, totals, invoice numbers) — the server recomputes all totals. Every
+> create sends a `localId` so an offline retry is idempotent. bn/en i18n strings added for all Phase 05 features. Mobile typecheck 0 errors.
+
+> **Phase 05.09 Void / Reversal VERIFIED (2026-08-20):** New `void.service.ts` (`voidSale`, `voidPurchase`, `calcAvgCostAfterVoid`) wired as
+> `POST /api/v1/sales/:id/void` and `POST /api/v1/purchases/:id/void` through the established middleware chain. Recovery audit found no
+> pre-existing 05.09 work. Only `COMPLETED → VOIDED` is legal: DRAFT is 400 and a repeat void is an idempotent no-op reporting `duplicate: true`.
+> Nothing is ever deleted — the document keeps its invoiceNo, totals, original journal and original audit entry, and every reversal is a NEW row.
+> Sale void restores stock (`sale_void` movement), decrements the customer due under a `currentDue >= dueAmount` guard, debits the paid amount out of
+> the SAME account (snapshotted `paymentAccountId`), mirrors the journal and writes `SALE_VOIDED`. Purchase void removes stock under the existing
+> `allowNegativeStock` policy, recomputes avgCost from inventory VALUE (never an inverse-formula un-blend, so it stays correct after later purchases
+> and absorbs paisa drift), decrements the supplier payable under a `currentPayable >= dueAmount` guard, refunds the SAME account, mirrors the journal
+> and writes `PURCHASE_VOIDED`. Journal reversal reuses the verified 05.04 engine unchanged (`REVERSAL`, `isReversal`, `reversesEntryId`, mirrored
+> debit/credit); the original entry and its lines are asserted unchanged after the void and both entries asserted balanced. Documents with settlement
+> `Payment` records are refused 400 rather than double-refunded; a due/payable already settled below the document's own figure is refused rather than
+> driven negative. RBAC Owner/Admin/Manager at route AND service level — Salesperson, Accountant, Inventory Manager and Viewer 403 (Inventory Manager
+> may record a purchase but not unwind one). Cross-tenant/cross-shop/foreign-document 404 with zero side effects. Four fault-injection rollback proofs
+> including one that aborts at the LAST step before commit (journal reversal) with stock, avgCost, payable and the account refund all restored.
+> Additive model changes only: `sale_void`/`purchase_void` StockMovement types (kept distinct from Phase 06 returns) and a nullable `paymentAccountId`
+> snapshot on Sale/Purchase.
+> Known gaps: no settlement-payment refund, no partial/line-level void (Phase 06 returns), no un-void, no mobile screens (05.12).
+> 44 void tests pass; full suite 320/320; npm test exits 0; backend typecheck 0 errors; mobile typecheck 0 errors.
+
 > **Phase 05.08 Purchase VERIFIED (2026-08-20):** Purchase model (embedded PurchaseItem) + purchase service/controller/routes/schemas mounted at
 > `/api/v1/purchases` (`POST /`, `GET /`, `GET /:id`, `POST /:id/finalize`). Recovered from an interrupted session — all files already existed and the
 > re-run baseline was green, so no 05.08 code was rewritten; the gap was test coverage (38 → 46 tests). StockMovement, BusinessCounter, journal,
@@ -428,11 +463,11 @@
 
 - [x] `POST/GET /api/v1/sales`
 - [x] `POST /api/v1/sales/:id/finalize`
-- [ ] `POST /api/v1/sales/:id/cancel`
+- [x] `POST /api/v1/sales/:id/void`
 - [x] `GET /api/v1/sales/:id`
 - [x] `POST/GET /api/v1/purchases`
 - [x] `POST /api/v1/purchases/:id/finalize`
-- [ ] `POST /api/v1/purchases/:id/cancel`
+- [x] `POST /api/v1/purchases/:id/void`
 - [x] `GET /api/v1/purchases/:id`
 - [x] `POST/GET /api/v1/payments`
 - [x] `POST/GET /api/v1/expenses`
