@@ -9,6 +9,12 @@ export interface AuthUser {
   name: string;
   role?: string;
   businessId?: string;
+  /**
+   * The Device the access token was issued to (05.13). Taken from the VERIFIED
+   * JWT claims, never from the request body, so a client cannot attribute an
+   * offline record to another device.
+   */
+  deviceId?: string;
 }
 
 declare global {
@@ -48,6 +54,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       id: String(user._id),
       email: user.email,
       name: user.name,
+      deviceId: claims.deviceId,
     };
     next();
   } catch (err) {

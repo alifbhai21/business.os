@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { Types, ClientSession } from "mongoose";
 import { Expense, ExpenseDocument } from "../models/Expense";
 import { Account } from "../models/Account";
 import { AuditLog } from "../models/AuditLog";
@@ -8,7 +8,7 @@ import {
   expenseAccountName,
   journalAssetAccountFor,
 } from "../config/accounts";
-import { membershipFor } from "./membership";
+import { membershipFor, isDuplicateKeyError } from "./membership";
 import { decrementBalance } from "./account.service";
 import { writeJournal } from "./journal.service";
 import { withTransaction } from "../db/transactions";
@@ -26,6 +26,8 @@ export interface CreateExpenseInput {
   receiptUrl?: string | null;
   expenseDate?: Date | string | null;
   localId?: string | null;
+  /** Snapshotted from the verified token claims by the controller (05.13). */
+  deviceId?: string | null;
 }
 
 export interface ListExpensesQuery {
@@ -46,6 +48,7 @@ function toPublic(e: ExpenseDocument) {
     receiptUrl: e.receiptUrl,
     expenseDate: e.expenseDate,
     localId: e.localId,
+    deviceId: e.deviceId ? String(e.deviceId) : null,
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
   };
@@ -77,11 +80,17 @@ async function assertCanRecord(userId: string, businessId: string, shopId: strin
  * document, write a balanced JournalEntry (DEBIT Expense:<category> /
  * CREDIT the asset account) and an audit record. Any failure rolls back all
  * of it — there are no compensating writes.
+ *
+ * Offline-sync idempotency (05.13): a `localId` is the device's own id for the
+ * operation, so a retried offline expense resolves to the ORIGINAL record with
+ * `duplicate: true` instead of deducting the account a second time. The
+ * unique partial index on {businessId, localId} closes the concurrent race the
+ * in-transaction lookup cannot.
  */
 export async function createExpense(
   userId: string,
   input: CreateExpenseInput
-): Promise<ReturnType<typeof toPublic>> {
+): Promise<{ expense: ReturnType<typeof toPublic>; duplicate: boolean }> {
   assertSafePaisa(input.amount, "amount");
   if (input.amount <= 0) throw ApiError.badRequest("amount must be positive paisa");
   if (!(EXPENSE_CATEGORIES as readonly string[]).includes(input.category)) {
@@ -89,7 +98,15 @@ export async function createExpense(
   }
   await assertCanRecord(userId, input.businessId, input.shopId);
 
-  const expense = await withTransaction(async (session) => {
+  const run = async (session: ClientSession | null) => {
+    if (input.localId) {
+      const existing = await Expense.findOne({
+        businessId: new Types.ObjectId(input.businessId),
+        localId: input.localId,
+      }).session(session);
+      if (existing) return { expense: existing, duplicate: true };
+    }
+
     // The payment account must belong to THIS business AND THIS shop.
     const account = await Account.findOne({
       _id: new Types.ObjectId(input.paymentAccountId),
@@ -120,6 +137,7 @@ export async function createExpense(
           expenseDate: input.expenseDate ? new Date(input.expenseDate) : new Date(),
           createdBy: new Types.ObjectId(userId),
           localId: input.localId ?? null,
+          deviceId: input.deviceId ? new Types.ObjectId(input.deviceId) : null,
         },
       ],
       { session: session ?? undefined, ordered: true }
@@ -170,10 +188,23 @@ export async function createExpense(
       { session: session ?? undefined, ordered: true }
     );
 
-    return created[0];
-  });
+    return { expense: created[0], duplicate: false };
+  };
 
-  return toPublic(expense);
+  try {
+    const result = await withTransaction(run);
+    return { expense: toPublic(result.expense), duplicate: result.duplicate };
+  } catch (err) {
+    // A concurrent create with the same localId lost the race on the unique index.
+    if (isDuplicateKeyError(err) && input.localId) {
+      const existing = await Expense.findOne({
+        businessId: new Types.ObjectId(input.businessId),
+        localId: input.localId,
+      });
+      if (existing) return { expense: toPublic(existing), duplicate: true };
+    }
+    throw err;
+  }
 }
 
 export async function listExpenses(

@@ -10,6 +10,7 @@ import { AuditLog } from "../src/models/AuditLog";
 import { JournalEntry } from "../src/models/JournalEntry";
 import { JournalLine } from "../src/models/JournalLine";
 import { BusinessMembership } from "../src/models/BusinessMembership";
+import { Device } from "../src/models/Device";
 import { createExpense } from "../src/services/expense.service";
 import { AccountType, JOURNAL_ACCOUNTS, expenseAccountName } from "../src/config/accounts";
 
@@ -580,5 +581,255 @@ test("expense: get is shop-scoped (404 from another shop's scope)", async () => 
 test("expense: unauthenticated denied (401)", async () => {
   const res = await request(app).get(`/api/v1/expenses?businessId=${bizA.id}&shopId=${shopA.id}`);
   assert.equal(res.status, 401);
+});
+
+// ── 05.13 Offline-sync idempotency ─────────────────────────────────────────────
+
+test("expense: first offline request with a localId creates exactly one expense (05.13)", async () => {
+  const paymentAccountId = await makeAccount(bizA.id, shopA.id, 50000);
+  const localId = `elocal-1-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const res = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, { amount: 4000, paymentAccountId, localId })
+  );
+  assert.equal(res.status, 201);
+  assert.equal(res.body.data.duplicate, false);
+  assert.equal(res.body.data.localId, localId);
+
+  const acct = await Account.findById(paymentAccountId);
+  assert.equal(acct!.currentBalance, 46000);
+  assert.equal(
+    await Expense.countDocuments({
+      businessId: new mongoose.Types.ObjectId(bizA.id),
+      localId,
+    }),
+    1
+  );
+});
+
+test("expense: a retried localId returns the original expense with zero additional effects (05.13)", async () => {
+  const paymentAccountId = await makeAccount(bizA.id, shopA.id, 50000);
+  const localId = `elocal-retry-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const body = expenseBody(bizA.id, shopA.id, { amount: 4000, paymentAccountId, localId });
+
+  const first = await post(ownerA.accessToken, body);
+  assert.equal(first.status, 201);
+  assert.equal(first.body.data.duplicate, false);
+
+  const journalsBefore = await JournalEntry.countDocuments({
+    businessId: new mongoose.Types.ObjectId(bizA.id),
+    referenceType: "EXPENSE",
+  });
+  const auditBefore = await AuditLog.countDocuments({
+    businessId: new mongoose.Types.ObjectId(bizA.id),
+    action: "EXPENSE_CREATED",
+  });
+
+  // Retry with the SAME localId — must not deduct or journal again.
+  const retry = await post(ownerA.accessToken, body);
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.data.duplicate, true);
+  assert.equal(retry.body.data.id, first.body.data.id);
+
+  const acct = await Account.findById(paymentAccountId);
+  assert.equal(acct!.currentBalance, 46000, "account deducted exactly once");
+  assert.equal(
+    await Expense.countDocuments({
+      businessId: new mongoose.Types.ObjectId(bizA.id),
+      localId,
+    }),
+    1
+  );
+  assert.equal(
+    await JournalEntry.countDocuments({
+      businessId: new mongoose.Types.ObjectId(bizA.id),
+      referenceType: "EXPENSE",
+    }),
+    journalsBefore,
+    "no second journal entry"
+  );
+  assert.equal(
+    await AuditLog.countDocuments({
+      businessId: new mongoose.Types.ObjectId(bizA.id),
+      action: "EXPENSE_CREATED",
+    }),
+    auditBefore,
+    "no second audit record"
+  );
+});
+
+test("expense: concurrent duplicate localId requests apply the expense exactly once (05.13)", async () => {
+  const paymentAccountId = await makeAccount(bizA.id, shopA.id, 50000);
+  const localId = `elocal-conc-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const body = expenseBody(bizA.id, shopA.id, { amount: 3000, paymentAccountId, localId });
+
+  const settled = await Promise.allSettled([
+    post(ownerA.accessToken, body),
+    post(ownerA.accessToken, body),
+    post(ownerA.accessToken, body),
+  ]);
+  const ok = settled.filter(
+    (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof post>>> =>
+      r.status === "fulfilled" && r.value.status >= 200 && r.value.status < 300
+  );
+  assert.equal(ok.length, 3, "every concurrent request resolves (one 201, two 200)");
+  const ids = new Set(ok.map((r) => r.value.body.data.id));
+  assert.equal(ids.size, 1, "all concurrent requests resolve to the SAME expense");
+
+  const acct = await Account.findById(paymentAccountId);
+  assert.equal(acct!.currentBalance, 47000, "balance changed exactly once");
+  assert.equal(
+    await Expense.countDocuments({
+      businessId: new mongoose.Types.ObjectId(bizA.id),
+      localId,
+    }),
+    1
+  );
+  const entries = await JournalEntry.countDocuments({
+    businessId: new mongoose.Types.ObjectId(bizA.id),
+    referenceType: "EXPENSE",
+    referenceId: new mongoose.Types.ObjectId(Array.from(ids)[0]),
+  });
+  assert.equal(entries, 1, "exactly one journal entry");
+});
+
+test("expense: two DIFFERENT localIds create two expenses (client retry identity is per operation) (05.13)", async () => {
+  const paymentAccountId = await makeAccount(bizA.id, shopA.id, 50000);
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const a = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, { amount: 1000, paymentAccountId, localId: `ea-${stamp}` })
+  );
+  const b = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, { amount: 2000, paymentAccountId, localId: `eb-${stamp}` })
+  );
+  assert.equal(a.status, 201);
+  assert.equal(b.status, 201);
+  assert.notEqual(a.body.data.id, b.body.data.id);
+
+  const acct = await Account.findById(paymentAccountId);
+  assert.equal(acct!.currentBalance, 47000, "both deductions applied once each");
+});
+
+test("expense: same localId with a conflicting payload returns the original — no partial or second effect (05.13)", async () => {
+  const paymentAccountId = await makeAccount(bizA.id, shopA.id, 50000);
+  const localId = `elocal-conflict-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const first = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, { amount: 4000, paymentAccountId, localId, category: "RENT" })
+  );
+  assert.equal(first.status, 201);
+
+  // Conflicting retry: different amount AND different category, same localId.
+  const retry = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, {
+      amount: 9000,
+      paymentAccountId,
+      localId,
+      category: "ELECTRICITY",
+    })
+  );
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.data.duplicate, true);
+  assert.equal(retry.body.data.id, first.body.data.id);
+  assert.equal(retry.body.data.amount, 4000, "the ORIGINAL amount wins");
+  assert.equal(retry.body.data.category, "RENT", "the ORIGINAL category wins");
+
+  const acct = await Account.findById(paymentAccountId);
+  assert.equal(acct!.currentBalance, 46000, "deducted the original 4000 only");
+  assert.equal(
+    await Expense.countDocuments({
+      businessId: new mongoose.Types.ObjectId(bizA.id),
+      localId,
+    }),
+    1
+  );
+});
+
+test("expense: localId uniqueness is business-scoped — same localId in two businesses is two expenses (05.13)", async () => {
+  const acctA = await makeAccount(bizA.id, shopA.id, 50000);
+  const acctB = await makeAccount(bizB.id, shopB.id, 50000);
+  const localId = `elocal-cross-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const inA = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, { amount: 1000, paymentAccountId: acctA, localId })
+  );
+  const inB = await post(
+    userB.accessToken,
+    expenseBody(bizB.id, shopB.id, { amount: 2000, paymentAccountId: acctB, localId })
+  );
+
+  assert.equal(inA.status, 201);
+  assert.equal(inB.status, 201);
+  assert.notEqual(inA.body.data.id, inB.body.data.id, "the same localId is distinct across tenants");
+  assert.equal((await Account.findById(acctA))!.currentBalance, 49000);
+  assert.equal((await Account.findById(acctB))!.currentBalance, 48000);
+});
+
+test("expense: deviceId is snapshotted from the verified token, never accepted from the body (05.13)", async () => {
+  const paymentAccountId = await makeAccount(bizA.id, shopA.id, 50000);
+  const res = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, {
+      amount: 1000,
+      paymentAccountId,
+      deviceId: new mongoose.Types.ObjectId().toString(), // client-supplied spoof
+    })
+  );
+  // The Zod schema is .strict() — deviceId is not a legal field, so the
+  // request is rejected outright rather than the spoof being stored.
+  assert.equal(res.status, 400);
+
+  // A legitimate request stores the REAL device from the JWT claims.
+  const legit = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, { amount: 1000, paymentAccountId })
+  );
+  assert.equal(legit.status, 201);
+  const doc = await Expense.findById(legit.body.data.id);
+  assert.ok(doc!.deviceId, "deviceId persisted from token claims");
+  const device = await Device.findById(doc!.deviceId);
+  assert.ok(device, "references the registered Device for this session");
+  assert.equal(device!.deviceId, DEV.deviceId);
+});
+
+test("expense: an offline retry after failure is safe — a failed localId request can be retried fresh (05.13)", async () => {
+  // First attempt fails mid-transaction (insufficient balance) — zero effects.
+  const paymentAccountId = await makeAccount(bizA.id, shopA.id, 1000);
+  const localId = `elocal-fail-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const failed = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, { amount: 5000, paymentAccountId, localId })
+  );
+  assert.equal(failed.status, 400);
+  assert.equal((await Account.findById(paymentAccountId))!.currentBalance, 1000);
+  assert.equal(
+    await Expense.countDocuments({
+      businessId: new mongoose.Types.ObjectId(bizA.id),
+      localId,
+    }),
+    0
+  );
+
+  // Retry with the SAME localId once the account is funded — must succeed once.
+  await Account.updateOne({ _id: new mongoose.Types.ObjectId(paymentAccountId) }, { $set: { currentBalance: 50000 } });
+  const retry = await post(
+    ownerA.accessToken,
+    expenseBody(bizA.id, shopA.id, { amount: 3000, paymentAccountId, localId })
+  );
+  assert.equal(retry.status, 201);
+  assert.equal(retry.body.data.duplicate, false);
+  assert.equal((await Account.findById(paymentAccountId))!.currentBalance, 47000);
+  assert.equal(
+    await Expense.countDocuments({
+      businessId: new mongoose.Types.ObjectId(bizA.id),
+      localId,
+    }),
+    1
+  );
 });
 

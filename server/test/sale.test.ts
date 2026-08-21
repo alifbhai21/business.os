@@ -14,6 +14,7 @@ import { AuditLog } from "../src/models/AuditLog";
 import { JournalEntry } from "../src/models/JournalEntry";
 import { JournalLine } from "../src/models/JournalLine";
 import { BusinessMembership } from "../src/models/BusinessMembership";
+import { Device } from "../src/models/Device";
 import { createSale, finalizeSale } from "../src/services/sale.service";
 import { fiscalYearOf, formatDocumentNo } from "../src/utils/invoice";
 import { AccountType, JOURNAL_ACCOUNTS } from "../src/config/accounts";
@@ -747,7 +748,7 @@ test("sale: concurrent finalizations never share an invoice number", async () =>
     )
   );
   const fulfilled = results.filter(
-    (r): r is PromiseFulfilledResult<{ sale: { invoiceNo: string | null } }> =>
+    (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof createSale>>> =>
       r.status === "fulfilled"
   );
   assert.equal(fulfilled.length, 3);
@@ -1049,5 +1050,40 @@ test("sale: get by id is shop-scoped (404 from another shop's scope)", async () 
 test("sale: unauthenticated denied (401)", async () => {
   const res = await request(app).get(`/api/v1/sales?businessId=${bizA.id}&shopId=${shopA.id}`);
   assert.equal(res.status, 401);
+});
+
+// ── 05.13 Device identity (trusted JWT claims, never the body) ────────────────
+
+test("sale: deviceId is snapshotted from the verified token claims, never the body (05.13)", async () => {
+  const product = await makeProduct(bizA.id, { currentStock: 20 });
+  const accountId = await makeAccount(bizA.id, shopA.id, 50000);
+  const created = await post(
+    ownerA.accessToken,
+    "/api/v1/sales",
+    saleBody(bizA.id, shopA.id, {
+      items: [{ productId: String(product._id), qty: 1 }],
+      draft: true,
+      deviceId: new mongoose.Types.ObjectId().toString(), // client spoof
+    })
+  );
+  // The Zod schema is .strict() — deviceId is not a legal input.
+  assert.equal(created.status, 400);
+
+  // A legitimate request stores the REAL Device from the JWT claims.
+  const legit = await post(
+    ownerA.accessToken,
+    "/api/v1/sales",
+    saleBody(bizA.id, shopA.id, {
+      items: [{ productId: String(product._id), qty: 1 }],
+      paidAmount: 11000, // full total (qty 1 × 10000 + 10% tax) — no credit due
+      accountId,
+    })
+  );
+  assert.equal(legit.status, 201);
+  const doc = await Sale.findById(legit.body.data.id);
+  assert.ok(doc!.deviceId, "deviceId persisted from token claims");
+  const device = await Device.findById(doc!.deviceId);
+  assert.ok(device, "references the registered Device for this session");
+  assert.equal(device!.deviceId, DEV.deviceId);
 });
 

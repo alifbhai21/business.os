@@ -14,6 +14,7 @@ import { JournalEntry } from "../src/models/JournalEntry";
 import { JournalLine } from "../src/models/JournalLine";
 import { BusinessMembership } from "../src/models/BusinessMembership";
 import { Business } from "../src/models/Business";
+import { Device } from "../src/models/Device";
 import {
   createPurchase,
   finalizePurchase,
@@ -1405,7 +1406,7 @@ test("purchase: concurrent finalizations never share a purchase number", async (
     )
   );
   const fulfilled = results.filter(
-    (r): r is PromiseFulfilledResult<{ purchase: { invoiceNo: string | null } }> =>
+    (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof createPurchase>>> =>
       r.status === "fulfilled"
   );
   assert.equal(fulfilled.length, 3);
@@ -1582,5 +1583,43 @@ test("purchase: Zod schema rejects spoofed, malformed and contradictory input", 
     }).success,
     false
   );
+});
+
+// ── 05.13 Device identity (trusted JWT claims, never the body) ────────────────
+
+test("purchase: deviceId is snapshotted from the verified token claims, never the body (05.13)", async () => {
+  const supplier = await makeSupplier(bizA.id);
+  const product = await makeProduct(bizA.id, { currentStock: 0, avgCost: 0, taxRate: 0 });
+  const accountId = await makeAccount(bizA.id, shopA.id, 50000);
+
+  const spoof = await post(
+    ownerA.accessToken,
+    "/api/v1/purchases",
+    purchaseBody(bizA.id, shopA.id, String(supplier._id), {
+      items: [{ productId: String(product._id), qty: 2, unitPrice: 1000 }],
+      paidAmount: 2000,
+      accountId,
+      deviceId: new mongoose.Types.ObjectId().toString(), // client spoof
+    })
+  );
+  // The Zod schema is .strict() — deviceId is not a legal input.
+  assert.equal(spoof.status, 400);
+
+  // A legitimate request stores the REAL Device from the JWT claims.
+  const legit = await post(
+    ownerA.accessToken,
+    "/api/v1/purchases",
+    purchaseBody(bizA.id, shopA.id, String(supplier._id), {
+      items: [{ productId: String(product._id), qty: 2, unitPrice: 1000 }],
+      paidAmount: 2000,
+      accountId,
+    })
+  );
+  assert.equal(legit.status, 201);
+  const doc = await Purchase.findById(legit.body.data.id);
+  assert.ok(doc!.deviceId, "deviceId persisted from token claims");
+  const device = await Device.findById(doc!.deviceId);
+  assert.ok(device, "references the registered Device for this session");
+  assert.equal(device!.deviceId, DEV.deviceId);
 });
 

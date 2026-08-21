@@ -62,6 +62,8 @@ export interface CreatePurchaseInput extends PurchasePaymentInput {
   notes?: string | null;
   purchaseDate?: Date | string | null;
   localId?: string | null;
+  /** Snapshotted from the verified token claims by the controller (05.13). */
+  deviceId?: string | null;
   draft?: boolean;
 }
 
@@ -106,11 +108,13 @@ function toPublic(p: PurchaseDocument) {
     total: p.total,
     paidAmount: p.paidAmount,
     dueAmount: p.dueAmount,
+    paymentAccountId: p.paymentAccountId ? String(p.paymentAccountId) : null,
     paymentStatus: p.paymentStatus,
     status: p.status,
     notes: p.notes,
     purchaseDate: p.purchaseDate,
     localId: p.localId,
+    deviceId: p.deviceId ? String(p.deviceId) : null,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };
@@ -118,6 +122,9 @@ function toPublic(p: PurchaseDocument) {
 
 /** PRD role matrix — purchases are recorded by stock-owning roles, not Salesperson. */
 const PURCHASE_WRITE_ROLES = ["Owner", "Admin", "Manager", "Inventory Manager"] as const;
+
+/** Public serializer shared with void.service (05.09) — no duplicate mapping. */
+export { toPublic as toPublicPurchase };
 
 async function assertAccess(userId: string, businessId: string, shopId: string) {
   const membership = await membershipFor(userId, businessId);
@@ -399,6 +406,7 @@ async function finalizeInSession(
   // --- Payment account (cash portion only) — money OUT of the business ---
   let assetAccountName: string = JOURNAL_ACCOUNTS.CASH;
   let assetAccountType: JournalAccountType = JOURNAL_ACCOUNT_TYPES[JOURNAL_ACCOUNTS.CASH];
+  let paymentAccountId: Types.ObjectId | null = null;
   if (paidAmount > 0) {
     if (!payment.accountId) throw ApiError.badRequest("accountId is required when paidAmount > 0");
     const account = await Account.findOne({
@@ -410,6 +418,7 @@ async function finalizeInSession(
     const asset = journalAssetAccountFor(account.type);
     assetAccountName = asset.name;
     assetAccountType = asset.accountType;
+    paymentAccountId = account._id as Types.ObjectId;
     // Existing account policy: the guarded decrement rejects an overdraft.
     await decrementBalance(businessId, shopId, String(account._id), paidAmount, session);
   }
@@ -418,6 +427,8 @@ async function finalizeInSession(
   purchase.invoiceNo = invoiceNo;
   purchase.paidAmount = paidAmount;
   purchase.dueAmount = dueAmount;
+  // Snapshotted so a 05.09 void refunds into the same account.
+  purchase.paymentAccountId = paymentAccountId;
   purchase.paymentStatus = derivePaymentStatus(purchase.total, paidAmount);
   purchase.status = "COMPLETED";
   await purchase.save({ session: session ?? undefined });
@@ -561,6 +572,7 @@ export async function createPurchase(
           purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : new Date(),
           createdBy: new Types.ObjectId(userId),
           localId: input.localId ?? null,
+          deviceId: input.deviceId ? new Types.ObjectId(input.deviceId) : null,
         },
       ],
       { session: session ?? undefined, ordered: true }

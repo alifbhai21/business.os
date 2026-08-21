@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PAYMENT_METHODS } from "../config/accounts";
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid MongoDB ObjectId");
 
@@ -97,7 +98,48 @@ export const saleFinalizeSchema = z
     }
   });
 
+/**
+ * Voiding takes no financial input at all: every reversal amount is read from
+ * the stored sale, and the account refunded is the one snapshotted at
+ * finalization. `.strict()` therefore rejects any client attempt to steer the
+ * reversal (accountId, amounts, status).
+ */
+export const saleVoidSchema = z
+  .object({
+    businessId: z.string().min(1, "businessId is required"),
+    shopId: z.string().min(1, "shopId is required"),
+    reason: z.string().trim().max(500).optional().nullable(),
+  })
+  .strict();
+
+/**
+ * Settling an outstanding invoice (05.11). The counterparty, the payment `type`
+ * and the `saleId` link are all read from the stored sale, so `.strict()`
+ * deliberately rejects `customerId`, `type`, `saleId`, `paidAmount`,
+ * `paymentStatus` and every other field that would let a client redirect the
+ * money or restate the document's own figures.
+ */
+export const salePaymentSchema = z
+  .object({
+    businessId: z.string().min(1, "businessId is required"),
+    shopId: z.string().min(1, "shopId is required"),
+    amount: positivePaisa,
+    method: z.enum([...PAYMENT_METHODS] as [string, ...string[]]),
+    accountId: objectId,
+    note: z.string().trim().max(500).optional().nullable(),
+    idempotencyKey: z.string().trim().min(1, "idempotencyKey is required").max(120),
+    paymentDate: z
+      .string()
+      .datetime("paymentDate must be an ISO 8601 date-time")
+      .optional()
+      .nullable(),
+    localId: z.string().trim().max(80).optional().nullable(),
+  })
+  .strict();
+
 export type SaleCreateInput = z.infer<typeof saleCreateSchema>;
 export type SaleFinalizeInput = z.infer<typeof saleFinalizeSchema>;
+export type SaleVoidInput = z.infer<typeof saleVoidSchema>;
+export type SalePaymentRequestInput = z.infer<typeof salePaymentSchema>;
 // positivePaisa is exported for reuse by Purchase (05.08) schemas.
 export { positivePaisa, nonNegativePaisa };

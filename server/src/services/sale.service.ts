@@ -61,6 +61,8 @@ export interface CreateSaleInput extends SalePaymentInput {
   notes?: string | null;
   saleDate?: Date | string | null;
   localId?: string | null;
+  /** Snapshotted from the verified token claims by the controller (05.13). */
+  deviceId?: string | null;
   draft?: boolean;
 }
 
@@ -102,11 +104,13 @@ function toPublic(s: SaleDocument) {
     total: s.total,
     paidAmount: s.paidAmount,
     dueAmount: s.dueAmount,
+    paymentAccountId: s.paymentAccountId ? String(s.paymentAccountId) : null,
     paymentStatus: s.paymentStatus,
     status: s.status,
     notes: s.notes,
     saleDate: s.saleDate,
     localId: s.localId,
+    deviceId: s.deviceId ? String(s.deviceId) : null,
     createdAt: s.createdAt,
     updatedAt: s.updatedAt,
   };
@@ -114,6 +118,9 @@ function toPublic(s: SaleDocument) {
 
 /** PRD role matrix — sales are recorded by front-of-house roles, not Accountant. */
 const SALE_WRITE_ROLES = ["Owner", "Admin", "Manager", "Salesperson"] as const;
+
+/** Public serializer shared with void.service (05.09) — no duplicate mapping. */
+export { toPublic as toPublicSale };
 
 async function assertAccess(userId: string, businessId: string, shopId: string) {
   const membership = await membershipFor(userId, businessId);
@@ -334,6 +341,7 @@ async function finalizeInSession(
   // --- Payment account (cash portion only) ---
   let assetAccountName: string = JOURNAL_ACCOUNTS.CASH;
   let assetAccountType: JournalAccountType = JOURNAL_ACCOUNT_TYPES[JOURNAL_ACCOUNTS.CASH];
+  let paymentAccountId: Types.ObjectId | null = null;
   if (paidAmount > 0) {
     if (!payment.accountId) throw ApiError.badRequest("accountId is required when paidAmount > 0");
     const account = await Account.findOne({
@@ -345,6 +353,7 @@ async function finalizeInSession(
     const asset = journalAssetAccountFor(account.type);
     assetAccountName = asset.name;
     assetAccountType = asset.accountType;
+    paymentAccountId = account._id as Types.ObjectId;
     await incrementBalance(businessId, shopId, String(account._id), paidAmount, session);
   }
 
@@ -352,6 +361,8 @@ async function finalizeInSession(
   sale.invoiceNo = invoiceNo;
   sale.paidAmount = paidAmount;
   sale.dueAmount = dueAmount;
+  // Snapshotted so a 05.09 void reverses the money against the same account.
+  sale.paymentAccountId = paymentAccountId;
   sale.paymentStatus = derivePaymentStatus(sale.total, paidAmount);
   sale.status = "COMPLETED";
   await sale.save({ session: session ?? undefined });
@@ -492,6 +503,7 @@ export async function createSale(
           saleDate: input.saleDate ? new Date(input.saleDate) : new Date(),
           createdBy: new Types.ObjectId(userId),
           localId: input.localId ?? null,
+          deviceId: input.deviceId ? new Types.ObjectId(input.deviceId) : null,
         },
       ],
       { session: session ?? undefined, ordered: true }

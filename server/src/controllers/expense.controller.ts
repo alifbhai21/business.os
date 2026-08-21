@@ -6,8 +6,13 @@ import { ApiError } from "../utils/ApiError";
 
 export const createExpense = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
-  const data = await expenseService.createExpense(req.user.id, req.body);
-  return sendSuccess(res, data, 201);
+  // deviceId comes from the VERIFIED token claims (05.13), never the body —
+  // the Zod schema is .strict() so a client cannot supply one at all.
+  const { expense, duplicate } = await expenseService.createExpense(req.user.id, {
+    ...req.body,
+    deviceId: req.user.deviceId ?? null,
+  });
+  return sendSuccess(res, { ...expense, duplicate }, duplicate ? 200 : 201);
 });
 
 export const listExpenses = asyncHandler(async (req: Request, res: Response) => {

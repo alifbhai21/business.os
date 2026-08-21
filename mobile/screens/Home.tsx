@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { DashboardScreen } from "./Dashboard";
 import { ProductsScreen } from "./Products";
 import { PartiesScreen } from "./Parties";
+import { TransactionsScreen } from "./Transactions";
 import { SettingsScreen, SettingsRoute } from "./Settings";
 import { BusinessSwitcherScreen } from "./BusinessSwitcher";
 import { ShopSwitcherScreen } from "./ShopSwitcher";
@@ -11,7 +12,7 @@ import { ShopManagementScreen } from "./ShopManagement";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
 
-type Tab = "dashboard" | "products" | "parties" | "settings";
+type Tab = "dashboard" | "transactions" | "products" | "parties" | "settings";
 
 export function Home() {
   const { t } = useI18n();
@@ -20,6 +21,7 @@ export function Home() {
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "dashboard", label: t("dashboard"), icon: "▦" },
+    { key: "transactions", label: t("sales"), icon: "🛒" },
     { key: "products", label: t("products"), icon: "◈" },
     { key: "parties", label: t("customers"), icon: "👥" },
     { key: "settings", label: t("settings"), icon: "⚙" },
@@ -34,6 +36,7 @@ export function Home() {
     <View style={styles.container}>
       <View style={styles.content}>
         {tab === "dashboard" && <DashboardScreen />}
+        {tab === "transactions" && <TransactionsScreen />}
         {tab === "products" && <ProductsScreen />}
         {tab === "parties" && <PartiesScreen />}
         {tab === "settings" && <SettingsScreen onNavigate={setOverlay} />}

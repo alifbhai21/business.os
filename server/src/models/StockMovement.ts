@@ -6,13 +6,20 @@ import { Schema, model, Document, Types } from "mongoose";
  * reconstructable — the product document is a cached running total.
  *
  * The full type enum is declared up front (Phase 06 returns/transfers/
- * adjustments will write the remaining types); Phase 05 Sale writes "sale".
+ * adjustments will write the remaining types); Phase 05 Sale writes "sale",
+ * Purchase writes "purchase", and 05.09 void writes "sale_void"/"purchase_void".
+ *
+ * `sale_void`/`purchase_void` are deliberately NOT the same as
+ * `sale_return`/`purchase_return`: a void cancels a mistaken transaction, a
+ * return is a real goods movement that Phase 06 will report on separately.
  */
 export const STOCK_MOVEMENT_TYPES = [
   "sale",
   "sale_return",
+  "sale_void",
   "purchase",
   "purchase_return",
+  "purchase_void",
   "transfer",
   "adjustment",
   "damage",
@@ -23,8 +30,10 @@ export type StockMovementType = (typeof STOCK_MOVEMENT_TYPES)[number];
 export const STOCK_MOVEMENT_REF_TYPES = [
   "SALE",
   "SALE_RETURN",
+  "SALE_VOID",
   "PURCHASE",
   "PURCHASE_RETURN",
+  "PURCHASE_VOID",
   "TRANSFER",
   "ADJUSTMENT",
   "DAMAGE",

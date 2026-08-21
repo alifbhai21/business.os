@@ -6,7 +6,12 @@ import { ApiError } from "../utils/ApiError";
 
 export const createPayment = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
-  const { payment, duplicate } = await paymentService.recordPayment(req.user.id, req.body);
+  // deviceId comes from the VERIFIED token claims (05.13), never the body —
+  // the Zod schema is .strict() so a client cannot supply one at all.
+  const { payment, duplicate } = await paymentService.recordPayment(req.user.id, {
+    ...req.body,
+    deviceId: req.user.deviceId ?? null,
+  });
   return sendSuccess(res, { ...payment, duplicate }, duplicate ? 200 : 201);
 });
 

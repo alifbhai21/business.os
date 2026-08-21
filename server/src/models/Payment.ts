@@ -19,6 +19,11 @@ export interface PaymentDocument extends Document {
   paymentDate: Date;
   createdBy: Types.ObjectId;
   localId: string | null;
+  /**
+   * The Device that originated this record (05.13). Snapshotted from the
+   * verified access-token claims, never from the request body.
+   */
+  deviceId: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +45,7 @@ const paymentSchema = new Schema<PaymentDocument>(
     paymentDate: { type: Date, required: true, default: () => new Date() },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     localId: { type: String, default: null, trim: true, maxlength: 80 },
+    deviceId: { type: Schema.Types.ObjectId, ref: "Device", default: null },
   },
   { timestamps: true }
 );

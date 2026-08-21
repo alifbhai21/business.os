@@ -21,6 +21,12 @@ export interface ExpenseDocument extends Document {
   expenseDate: Date;
   createdBy: Types.ObjectId;
   localId: string | null;
+  /**
+   * The Device that originated this record (05.13). Snapshotted from the
+   * verified access-token claims, never from the request body. Null for records
+   * created by a session without device context.
+   */
+  deviceId: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +43,7 @@ const expenseSchema = new Schema<ExpenseDocument>(
     expenseDate: { type: Date, required: true, default: () => new Date() },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     localId: { type: String, default: null, trim: true, maxlength: 80 },
+    deviceId: { type: Schema.Types.ObjectId, ref: "Device", default: null },
   },
   { timestamps: true }
 );
@@ -47,7 +54,13 @@ expenseSchema.index({ businessId: 1, expenseDate: -1 });
 // Category reporting (Phase 07 P&L) and per-account expense history.
 expenseSchema.index({ businessId: 1, category: 1 });
 expenseSchema.index({ businessId: 1, paymentAccountId: 1 });
-// Offline sync lookup by device-generated id.
-expenseSchema.index({ businessId: 1, localId: 1 });
+// Offline-sync idempotency: one expense per device-generated localId. The
+// partial filter lets the many online expenses with localId === null coexist,
+// and the uniqueness is what makes a retried offline expense resolve to the
+// original instead of deducting the account twice.
+expenseSchema.index(
+  { businessId: 1, localId: 1 },
+  { unique: true, partialFilterExpression: { localId: { $type: "string" } } }
+);
 
 export const Expense = model<ExpenseDocument>("Expense", expenseSchema);

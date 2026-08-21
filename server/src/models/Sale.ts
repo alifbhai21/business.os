@@ -42,12 +42,23 @@ export interface SaleDocument extends Document {
   total: number;
   paidAmount: number;
   dueAmount: number;
+  /**
+   * The physical Account credited with `paidAmount` at finalization, snapshotted
+   * so 05.09 void can reverse the money against the SAME account. Null when the
+   * sale was fully on credit.
+   */
+  paymentAccountId: Types.ObjectId | null;
   paymentStatus: SalePaymentStatus;
   status: SaleStatus;
   notes: string | null;
   saleDate: Date;
   createdBy: Types.ObjectId;
   localId: string | null;
+  /**
+   * The Device that originated this record (05.13). Snapshotted from the
+   * verified access-token claims, never from the request body.
+   */
+  deviceId: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -80,12 +91,14 @@ const saleSchema = new Schema<SaleDocument>(
     total: { type: Number, required: true }, // integer paisa
     paidAmount: { type: Number, default: 0 }, // integer paisa
     dueAmount: { type: Number, default: 0 }, // integer paisa
+    paymentAccountId: { type: Schema.Types.ObjectId, ref: "Account", default: null },
     paymentStatus: { type: String, enum: [...PAYMENT_STATUSES], default: "UNPAID" },
     status: { type: String, enum: [...SALE_STATUSES], default: "DRAFT" },
     notes: { type: String, default: null, trim: true, maxlength: 500 },
     saleDate: { type: Date, required: true, default: () => new Date() },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     localId: { type: String, default: null, trim: true, maxlength: 80 },
+    deviceId: { type: Schema.Types.ObjectId, ref: "Device", default: null },
   },
   { timestamps: true }
 );

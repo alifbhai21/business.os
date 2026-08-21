@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { PAYMENT_METHODS } from "../config/accounts";
+import { positivePaisa } from "./sale.schemas";
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid MongoDB ObjectId");
 
@@ -94,5 +96,42 @@ export const purchaseFinalizeSchema = z
     }
   });
 
+/**
+ * Voiding takes no financial input: reversal amounts come from the stored
+ * purchase and the refunded account is the one snapshotted at finalization.
+ */
+export const purchaseVoidSchema = z
+  .object({
+    businessId: z.string().min(1, "businessId is required"),
+    shopId: z.string().min(1, "shopId is required"),
+    reason: z.string().trim().max(500).optional().nullable(),
+  })
+  .strict();
+
+/**
+ * Settling a supplier bill (05.11). The supplier, the payment `type` and the
+ * `purchaseId` link come from the stored purchase; `.strict()` rejects any field
+ * that would let a client redirect the money or restate the bill's own figures.
+ */
+export const purchasePaymentSchema = z
+  .object({
+    businessId: z.string().min(1, "businessId is required"),
+    shopId: z.string().min(1, "shopId is required"),
+    amount: positivePaisa,
+    method: z.enum([...PAYMENT_METHODS] as [string, ...string[]]),
+    accountId: objectId,
+    note: z.string().trim().max(500).optional().nullable(),
+    idempotencyKey: z.string().trim().min(1, "idempotencyKey is required").max(120),
+    paymentDate: z
+      .string()
+      .datetime("paymentDate must be an ISO 8601 date-time")
+      .optional()
+      .nullable(),
+    localId: z.string().trim().max(80).optional().nullable(),
+  })
+  .strict();
+
 export type PurchaseCreateInput = z.infer<typeof purchaseCreateSchema>;
 export type PurchaseFinalizeInput = z.infer<typeof purchaseFinalizeSchema>;
+export type PurchaseVoidInput = z.infer<typeof purchaseVoidSchema>;
+export type PurchasePaymentRequestInput = z.infer<typeof purchasePaymentSchema>;
