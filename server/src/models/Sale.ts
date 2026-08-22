@@ -25,6 +25,12 @@ export interface SaleItem {
   taxAmount: number;
   /** Integer paisa — (qty × unitPrice) − discountAmount + taxAmount. */
   lineTotal: number;
+  /**
+   * Cumulative quantity returned against this line (Phase 06). Guarded by an
+   * atomic `$inc` inside the return transaction so concurrent returns can never
+   * drive the cumulative returned quantity above the original `qty`.
+   */
+  returnedQty: number;
 }
 
 export interface SaleDocument extends Document {
@@ -73,6 +79,7 @@ const saleItemSchema = new Schema<SaleItem>(
     discountAmount: { type: Number, default: 0 }, // integer paisa
     taxAmount: { type: Number, default: 0 }, // integer paisa
     lineTotal: { type: Number, required: true }, // integer paisa
+    returnedQty: { type: Number, default: 0 },
   },
   { _id: false }
 );

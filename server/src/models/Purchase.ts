@@ -33,6 +33,12 @@ export interface PurchaseItem {
   netUnitCost: number;
   /** Integer paisa — netAmount + taxAmount. */
   lineTotal: number;
+  /**
+   * Cumulative quantity returned against this line (Phase 06). Guarded by an
+   * atomic `$inc` inside the return transaction so concurrent returns can never
+   * drive the cumulative returned quantity above the original `qty`.
+   */
+  returnedQty: number;
 }
 
 export interface PurchaseDocument extends Document {
@@ -85,6 +91,7 @@ const purchaseItemSchema = new Schema<PurchaseItem>(
     costAmount: { type: Number, required: true }, // integer paisa
     netUnitCost: { type: Number, required: true }, // integer paisa
     lineTotal: { type: Number, required: true }, // integer paisa
+    returnedQty: { type: Number, default: 0 },
   },
   { _id: false }
 );

@@ -30,8 +30,8 @@
 - [ ] Phase 02 — Authentication & Security — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [ ] Phase 03 — Business & Shops — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [ ] Phase 04 — Products, Customers & Suppliers — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
-- [ ] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION COMPLETE (05.01–05.13 VERIFIED; 412/412 TESTS)
-- [ ] Phase 06 — Inventory, Returns & Transfers
+- [x] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION COMPLETE (05.01–05.13 VERIFIED; 412/412 TESTS)
+- [x] Phase 06 — Inventory, Returns & Transfers — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 444/444 TESTS)
 - [ ] Phase 07 — Double-Entry Accounting Engine
 - [ ] Phase 08 — Dashboard & Reports
 - [ ] Phase 09 — Employees, Roles & Devices
@@ -581,6 +581,88 @@
 - [ ] Adjustments work
 - [ ] Low-stock alerts work
 - [ ] Tests passing
+
+---
+
+## Phase 06 — Inventory, Returns & Transfers
+
+> **Phase 06 VERIFIED (2026-08-23):** Recovered from an interrupted session first: `test/payment.test.ts` had been overwritten with leaked editor
+> text and `test/inventory.test.ts` carried a stray diff-marker line — both repaired from HEAD/surgical edit before any Phase 06 work, restoring the
+> 412-test Phase 05 baseline. Implemented on top of it: the immutable StockMovement ledger (signed qtyChange + prevStock/newStock + unitCost snapshot,
+> unique per {business, refType, refId, product}); StockTransfer with a PENDING → IN_TRANSIT/RECEIVED/CANCELLED state machine writing TRANSFER_OUT on
+> the source at creation and TRANSFER_IN at the destination on receive; ADJUSTMENT/DAMAGE corrections and OPENING stock via one guarded atomic `$inc`
+> inside `withTransaction`; and full/partial SALE_RETURN / PURCHASE_RETURN flows that restore or remove stock, reverse the original journal
+> proportionally (debit total === credit total), adjust customer due / supplier payable under guarded updates, refund the snapshotted payment account,
+> write audit rows, and enforce cumulative returnedQty <= qty via an atomic `$expr` increment so concurrent returns can never over-return.
+> Idempotency follows the 05.13 pattern end-to-end: new StockReturn documents carry localId behind a unique partial index with in-transaction
+> pre-check and duplicate-key recovery, so retried or concurrent returns resolve to the ORIGINAL return (`duplicate:true`) with zero additional
+> stock or financial effect; StockTransfer already did. Fixed en route: PUT /transfers/:id/status returned 201 instead of 200. RBAC enforced twice
+> (route requireRole + service re-check): inventory Owner/Admin/Manager/Inventory Manager, returns Owner/Admin/Manager, transfers like inventory.
+> `.strict()` Zod schemas reject spoofed server-owned fields (returnedAmount, float qty). Mobile gained an Inventory hub tab: stock list with
+> low-stock filter, movements ledger, adjust/opening modals, sale/purchase returns (server owns every figure) and transfers — bn/en strings included;
+> Sale/Purchase serializers now expose returnedQty for the UI. MongoDB connectivity re-verified explicitly (connect, insert/read/delete round-trip,
+> admin ping, clean shutdown). Known gaps: no /returns register endpoint, no avgCost reversal on purchase returns, mobile runtime verification pending.
+
+### Database
+
+- [x] Create StockMovement model (type, qtyChange, prevStock/newStock snapshots, refType/refId)
+- [x] Create StockTransfer model (source, dest, product, qty, status state machine)
+- [x] Create StockReturn model (return record + localId idempotency anchor)
+- [x] Add indexes: StockMovement.businessId+productId+createdAt (+shopId variant)
+- [x] Unique index: { businessId, refType, refId, productId }; unique partial { businessId, localId } on transfers & returns
+
+### Backend
+
+- [x] Create inventory service (atomic stock engine)
+- [x] Create inventory controller
+- [x] Create inventory routes
+- [x] Sales return service
+- [x] Purchase return service
+- [x] Stock transfer service
+- [x] Stock adjustment service
+- [x] Low-stock detection service
+
+### API
+
+- [x] `GET /api/v1/inventory/stock`
+- [x] `GET /api/v1/inventory/movements`
+- [x] `POST /api/v1/inventory/adjust`
+- [x] `POST /api/v1/inventory/opening`
+- [x] `POST /api/v1/sales/:id/return`
+- [x] `POST /api/v1/purchases/:id/return`
+- [x] `POST/GET /api/v1/transfers`
+- [x] `PUT /api/v1/transfers/:id/status`
+
+### Mobile
+
+- [x] Inventory screen (stock list + low stock)
+- [x] Stock movements screen
+- [x] Adjust stock modal
+- [x] Opening stock modal
+- [x] Sales return screen
+- [x] Purchase return screen
+- [x] Stock transfer screen (source → dest → product → qty)
+
+### Testing
+
+- [x] Adjustment test (+/-, prev/new snapshots)
+- [x] Damaged stock test
+- [x] Low-stock detection test
+- [x] Sales/purchase return stock tests (increase/decrease)
+- [x] Over-return + concurrent over-return guards
+- [x] Transfer in/out movement records test
+- [x] Return + transfer idempotency (retry, concurrent duplicate)
+- [x] Atomic stock guard retained from Phase 05 suite
+- [x] HTTP surface: auth 401, RBAC 403, strict schema 400, cross-tenant 404, pagination
+
+### Acceptance Criteria
+
+- [x] Stock movements tracked for all operations
+- [x] Returns reverse stock + financials
+- [x] Transfers between shops work
+- [x] Adjustments work
+- [x] Low-stock alerts work
+- [x] Tests passing (444/444; npm test exits 0; backend typecheck 0 errors; mobile typecheck 0 errors)
 
 ---
 

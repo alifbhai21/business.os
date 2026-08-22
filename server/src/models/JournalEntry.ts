@@ -11,7 +11,9 @@ import { Schema, model, Document, Types } from "mongoose";
  */
 export const JOURNAL_REFERENCE_TYPES = [
   "SALE",
+  "SALE_RETURN",
   "PURCHASE",
+  "PURCHASE_RETURN",
   "PAYMENT",
   "EXPENSE",
   "REVERSAL",

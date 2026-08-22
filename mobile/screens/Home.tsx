@@ -4,6 +4,7 @@ import { DashboardScreen } from "./Dashboard";
 import { ProductsScreen } from "./Products";
 import { PartiesScreen } from "./Parties";
 import { TransactionsScreen } from "./Transactions";
+import { InventoryScreen } from "./InventoryHub";
 import { SettingsScreen, SettingsRoute } from "./Settings";
 import { BusinessSwitcherScreen } from "./BusinessSwitcher";
 import { ShopSwitcherScreen } from "./ShopSwitcher";
@@ -12,7 +13,7 @@ import { ShopManagementScreen } from "./ShopManagement";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
 
-type Tab = "dashboard" | "transactions" | "products" | "parties" | "settings";
+type Tab = "dashboard" | "transactions" | "products" | "inventory" | "parties" | "settings";
 
 export function Home() {
   const { t } = useI18n();
@@ -23,6 +24,7 @@ export function Home() {
     { key: "dashboard", label: t("dashboard"), icon: "▦" },
     { key: "transactions", label: t("sales"), icon: "🛒" },
     { key: "products", label: t("products"), icon: "◈" },
+    { key: "inventory", label: t("inventory"), icon: "📦" },
     { key: "parties", label: t("customers"), icon: "👥" },
     { key: "settings", label: t("settings"), icon: "⚙" },
   ];
@@ -38,6 +40,7 @@ export function Home() {
         {tab === "dashboard" && <DashboardScreen />}
         {tab === "transactions" && <TransactionsScreen />}
         {tab === "products" && <ProductsScreen />}
+        {tab === "inventory" && <InventoryScreen />}
         {tab === "parties" && <PartiesScreen />}
         {tab === "settings" && <SettingsScreen onNavigate={setOverlay} />}
       </View>

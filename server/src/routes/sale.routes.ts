@@ -5,6 +5,8 @@ import { resolveBusiness, assertShopAccess } from "../middleware/tenant";
 import { requireRole } from "../middleware/rbac";
 import { validateBody } from "../middleware/validate";
 import { saleCreateSchema, saleFinalizeSchema, saleVoidSchema, salePaymentSchema } from "../validation/sale.schemas";
+import * as returnController from "../controllers/return.controller";
+import { saleReturnSchema } from "../validation/inventory.schemas";
 
 const router = Router();
 
@@ -19,6 +21,14 @@ router.post(
   controller.createSale
 );
 router.get("/", resolveBusiness, assertShopAccess, controller.listSales);
+router.post(
+  "/:id/return",
+  resolveBusiness,
+  assertShopAccess,
+  requireRole("Owner", "Admin", "Manager"),
+  validateBody(saleReturnSchema),
+  returnController.returnSale
+);
 router.get("/:id", resolveBusiness, assertShopAccess, controller.getSale);
 router.post(
   "/:id/finalize",

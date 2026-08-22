@@ -10,6 +10,8 @@ import {
   purchaseVoidSchema,
   purchasePaymentSchema,
 } from "../validation/purchase.schemas";
+import * as returnController from "../controllers/return.controller";
+import { purchaseReturnSchema } from "../validation/inventory.schemas";
 
 const router = Router();
 
@@ -24,6 +26,14 @@ router.post(
   controller.createPurchase
 );
 router.get("/", resolveBusiness, assertShopAccess, controller.listPurchases);
+router.post(
+  "/:id/return",
+  resolveBusiness,
+  assertShopAccess,
+  requireRole("Owner", "Admin", "Manager"),
+  validateBody(purchaseReturnSchema),
+  returnController.returnPurchase
+);
 router.get("/:id", resolveBusiness, assertShopAccess, controller.getPurchase);
 router.post(
   "/:id/finalize",

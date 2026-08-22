@@ -81,6 +81,7 @@ function itemToPublic(item: SaleItem) {
     productId: String(item.productId),
     productName: item.productName,
     qty: item.qty,
+    returnedQty: item.returnedQty ?? 0,
     unitPrice: item.unitPrice,
     costPrice: item.costPrice,
     discountAmount: item.discountAmount,
@@ -212,6 +213,7 @@ async function buildLines(
       discountAmount: lineDiscount,
       taxAmount: lineTax,
       lineTotal: taxable + lineTax,
+      returnedQty: 0,
     });
 
     subtotal += lineSubtotal;
