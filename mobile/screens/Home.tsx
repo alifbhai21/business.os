@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { DashboardScreen } from "./Dashboard";
+import { DashboardScreen, type QuickAction } from "./Dashboard";
 import { ProductsScreen } from "./Products";
 import { PartiesScreen } from "./Parties";
 import { TransactionsScreen } from "./Transactions";
@@ -11,16 +11,33 @@ import { ShopSwitcherScreen } from "./ShopSwitcher";
 import { BusinessSettingsScreen } from "./BusinessSettings";
 import { ShopManagementScreen } from "./ShopManagement";
 import { AccountingScreen } from "./Accounting";
+import { ReportsScreen } from "./Reports";
+import { GlobalSearchScreen } from "./GlobalSearch";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
 
 type Tab = "dashboard" | "transactions" | "products" | "inventory" | "parties" | "settings";
 
+/** Overlays beyond the Settings routes that Home hosts. */
+type ExtraOverlay = "reports" | "search";
+
+/** Dashboard quick-action destinations land on the transactions hub. */
+const DASHBOARD_TXN_TARGET: Record<QuickAction, "sales" | "purchases" | "payments" | "expenses" | "accounts"> = {
+  sale: "sales",
+  purchase: "purchases",
+  customerPayment: "payments",
+  supplierPayment: "payments",
+  expense: "expenses",
+  transfer: "accounts",
+};
+
 export function Home() {
   const { t } = useI18n();
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [overlay, setOverlay] = useState<SettingsRoute | null>(null);
-
+  const [overlay, setOverlay] = useState<SettingsRoute | ExtraOverlay | null>(null);
+  const [txnSection, setTxnSection] = useState<
+    "sales" | "purchases" | "payments" | "accounts" | "expenses" | undefined
+  >(undefined);
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "dashboard", label: t("dashboard"), icon: "▦" },
     { key: "transactions", label: t("sales"), icon: "🛒" },
@@ -35,12 +52,25 @@ export function Home() {
   if (overlay === "businessSettings") return <BusinessSettingsScreen onDone={() => setOverlay(null)} />;
   if (overlay === "shopManagement") return <ShopManagementScreen onDone={() => setOverlay(null)} />;
   if (overlay === "accounting") return <AccountingScreen onDone={() => setOverlay(null)} />;
+  if (overlay === "reports") return <ReportsScreen onDone={() => setOverlay(null)} />;
+  if (overlay === "search") return <GlobalSearchScreen onDone={() => setOverlay(null)} />;
+
+  const handleQuickAction = (action: QuickAction) => {
+    setTxnSection(DASHBOARD_TXN_TARGET[action]);
+    setTab("transactions");
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {tab === "dashboard" && <DashboardScreen />}
-        {tab === "transactions" && <TransactionsScreen />}
+        {tab === "dashboard" && (
+          <DashboardScreen
+            onQuickAction={handleQuickAction}
+            onOpenReports={() => setOverlay("reports")}
+            onOpenSearch={() => setOverlay("search")}
+          />
+        )}
+        {tab === "transactions" && <TransactionsScreen initial={txnSection} />}
         {tab === "products" && <ProductsScreen />}
         {tab === "inventory" && <InventoryScreen />}
         {tab === "parties" && <PartiesScreen />}

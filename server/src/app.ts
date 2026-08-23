@@ -24,6 +24,9 @@ import invoiceRoutes from "./routes/invoice.routes";
 import inventoryRoutes from "./routes/inventory.routes";
 import transferRoutes from "./routes/transfer.routes";
 import accountingRoutes from "./routes/accounting.routes";
+import dashboardRoutes from "./routes/dashboard.routes";
+import reportRoutes from "./routes/report.routes";
+import searchRoutes from "./routes/search.routes";
 
 const env = loadEnv();
 
@@ -85,6 +88,9 @@ app.use("/api/v1/invoices", invoiceRoutes);
 app.use("/api/v1/inventory", inventoryRoutes);
 app.use("/api/v1/transfers", transferRoutes);
 app.use("/api/v1/accounting", accountingRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/search", searchRoutes);
 
 // --- 404 ---
 app.use((_req: Request, _res: Response, next: NextFunction) => {

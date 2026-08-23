@@ -10,9 +10,9 @@ import { ExpensesScreen } from "./Expenses";
 
 type Section = "sales" | "purchases" | "payments" | "accounts" | "expenses";
 
-export function TransactionsScreen() {
+export function TransactionsScreen({ initial }: { initial?: Section }) {
   const { t } = useI18n();
-  const [section, setSection] = useState<Section>("sales");
+  const [section, setSection] = useState<Section>(initial ?? "sales");
 
   const sections: { key: Section; label: string; icon: string }[] = [
     { key: "sales", label: t("sales"), icon: "🛒" },

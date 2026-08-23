@@ -11,7 +11,9 @@ export type SettingsRoute =
   | "shopSwitcher"
   | "businessSettings"
   | "shopManagement"
-  | "accounting";
+  | "accounting"
+  | "reports"
+  | "search";
 
 export function SettingsScreen({ onNavigate }: { onNavigate?: (route: SettingsRoute) => void }) {
   const { t, lang, setLang } = useI18n();
@@ -54,6 +56,7 @@ export function SettingsScreen({ onNavigate }: { onNavigate?: (route: SettingsRo
               <Button title={t("businessSettings")} onPress={() => onNavigate("businessSettings")} variant="secondary" />
               <Button title={t("shopManagement")} onPress={() => onNavigate("shopManagement")} variant="secondary" />
               <Button title={t("accounting")} onPress={() => onNavigate("accounting")} variant="secondary" />
+              <Button title={t("reports")} onPress={() => onNavigate("reports")} variant="secondary" />
             </View>
           </>
         )}

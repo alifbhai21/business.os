@@ -32,8 +32,8 @@
 - [ ] Phase 04 — Products, Customers & Suppliers — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [x] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION COMPLETE (05.01–05.13 VERIFIED; 412/412 TESTS)
 - [x] Phase 06 — Inventory, Returns & Transfers — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 444/444 TESTS)
-- [ ] Phase 07 — Double-Entry Accounting Engine — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 465/465 TESTS)
-- [ ] Phase 08 — Dashboard & Reports
+- [x] Phase 07 — Double-Entry Accounting Engine — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 465/465 TESTS)
+- [x] Phase 08 — Dashboard & Reports — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 510/510 TESTS + 18/18 REAL-ATLAS)
 - [ ] Phase 09 — Employees, Roles & Devices
 - [ ] Phase 10 — Offline SQLite & Sync Engine
 - [ ] Phase 11 — Backup & Restore
@@ -679,49 +679,77 @@
 
 ## Phase 08 — Dashboard & Reports
 
-### Backend
+> **Phase 08 VERIFIED (2026-08-23):** Recovery audit found an interrupted session's untracked
+> `dashboard.service.ts` — audited against the real models, fixed one real bug (recent activity
+> included DRAFT/VOIDED documents), then built additively on the VERIFIED Phase 05–07 engines.
+> Baseline recorded before any change: 465/465 tests, both typechecks clean. Implemented:
+> `GET /api/v1/dashboard` (today's sales/purchases/expenses + gross profit delegated to the Phase 07
+> journal P&L, stock value, cash, receivables/payables, low stock, COMPLETED-only recent activity);
+> `GET /api/v1/reports/{sales,purchases,inventory,profit-loss,receivables,payables,expenses}` with
+> daily/monthly/product/customer/supplier dimensions, `$facet` pagination, date-range validation
+> (inverted ranges rejected), and profit-loss DELEGATING to `accounting.service.profitLoss` (zero
+> duplicated aggregation); plus `GET /api/v1/search` for the spec'd global search (regex-escaped,
+> tenant+shop scoped, five buckets). RBAC mirrors the accounting persona matrix at route AND service
+> level: Owner/Admin/Manager/Accountant; Salesperson/Inventory Manager/Viewer 403; shop-pinned
+> members pinned server-side and unable to widen scope. Mobile rebuilt: Dashboard on the new endpoint
+> (quick actions, balances, low stock, recent activity, pull-to-refresh), Reports overlay hub (sales/
+> purchase/inventory/financial), Global Search screen, Settings entry, quick actions landing on the
+> matching Transactions-hub sections; bn/en i18n parity asserted by script (325 keys each). Every UI
+> figure is rendered from server payloads — no client-side financial computation.
+> Real Atlas verification (`business_os_api_test` only, masked URIs, safety-guarded harness):
+> dashboard DELTA assertions match exact HTTP transactions; sales/inventory/receivables/payables
+> reports reconciled against independent recomputation from raw Atlas collections; search hit +
+> cross-tenant non-leak. Full suite 510/510 (465 baseline preserved, 45 added), npm test exits 0,
+> backend typecheck 0 errors, mobile typecheck 0 errors.
+> Known gaps: server-local "today" timezone, UTC daily/monthly keys, business-level party scope for
+> inventory/receivables/payables, mobile runtime verification pending.
 
-- [ ] Create dashboard service
-- [ ] Create report service
-- [ ] Sales report (daily/monthly, product-wise, customer-wise)
-- [ ] Purchase report (date-wise, supplier-wise, product-wise)
-- [ ] Inventory report (current stock, valuation, low stock)
-- [ ] Financial report (P&L summary, receivables, payables, expenses)
+### Backend
+- [x] Dashboard service (today's metrics, stock value, receivables/payables, cash, low stock, recents)
+- [x] Report service (sales/purchase dimensions, inventory valuation, financial summaries)
+- [x] Sales report: daily/monthly, product-wise, customer-wise
+- [x] Purchase report: date-wise, supplier-wise, product-wise
+- [x] Inventory report: current stock, valuation, low stock
+- [x] Financial report: P&L summary, receivables, payables, expenses by category
 
 ### API
-
-- [ ] `GET /api/v1/dashboard`
-- [ ] `GET /api/v1/reports/sales`
-- [ ] `GET /api/v1/reports/purchases`
-- [ ] `GET /api/v1/reports/inventory`
-- [ ] `GET /api/v1/reports/profit-loss`
-- [ ] `GET /api/v1/reports/receivables`
-- [ ] `GET /api/v1/reports/payables`
-- [ ] `GET /api/v1/reports/expenses`
+- [x] `GET /api/v1/dashboard`
+- [x] `GET /api/v1/reports/sales`
+- [x] `GET /api/v1/reports/purchases`
+- [x] `GET /api/v1/reports/inventory`
+- [x] `GET /api/v1/reports/profit-loss`
+- [x] `GET /api/v1/reports/receivables`
+- [x] `GET /api/v1/reports/payables`
+- [x] `GET /api/v1/reports/expenses`
+- [x] `GET /api/v1/search?q=` (global search backend)
 
 ### Mobile
-
-- [ ] Dashboard screen (today's sales/purchases/expenses/profit, stock value, receivables/payables, cash, low stock)
-- [ ] Sales report screen
-- [ ] Purchase report screen
-- [ ] Inventory report screen
-- [ ] Financial report screen
-- [ ] Quick actions (+Sale +Purchase +Payment +Expense +Transfer)
-- [ ] Global search
+- [x] Dashboard screen (today's sales/purchases/expenses/profit, stock value, receivables/payables, cash, low stock, recent transactions)
+- [x] Sales report screen
+- [x] Purchase report screen
+- [x] Inventory report screen
+- [x] Financial report screen
+- [x] Quick actions (+Sale +Purchase +Payment +Expense +Transfer)
+- [x] Global search (products, customers, suppliers, invoices, SKU, barcode, phone)
 
 ### Testing
-
-- [ ] Dashboard aggregation tests
-- [ ] Sales report tests
-- [ ] Inventory report tests
-- [ ] Receivables/payables tests
+- [x] Dashboard aggregation tests (hand-computed deltas + absolutes)
+- [x] Sales report tests (all four groupings + pagination)
+- [x] Purchase report tests
+- [x] Inventory report tests (valuation exactness, low-stock flags)
+- [x] Receivables/payables tests
+- [x] Expense report tests
+- [x] Quick action navigation wiring (typechecked) + global search tests
+- [x] Security surface: auth 401, RBAC 403 matrix, tenant/shop isolation 404, validation 400s
+- [x] Real-Atlas reconciliation of dashboard + reports against raw collections
 
 ### Acceptance Criteria
 
-- [ ] Dashboard shows all key metrics
-- [ ] Reports generate correctly
-- [ ] Quick actions work
-- [ ] Tests passing
+- [x] Dashboard shows all key metrics
+- [x] Reports generate correctly
+- [x] Quick actions work
+- [x] Global search works
+- [x] Tests passing (510/510; test:atlas 18/18)
 
 ---
 

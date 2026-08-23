@@ -565,3 +565,157 @@ test("REAL-ATLAS: integrity scan — no orphan references introduced", async () 
   ]);
   assert.equal(orphanLines[0]?.orphans ?? 0, 0, "orphan JournalLines found");
 });
+// ══════════════════════════════════════════════════════════════════════════
+// PHASE 08 — dashboard, reports and global search over REAL Atlas data.
+//
+// The Atlas test database PERSISTS across runs, so every financial figure is
+// asserted as a hand-computed DELTA against a before() snapshot taken inside
+// the same test. Chain: HTTP -> Express -> controller -> service -> Atlas.
+// ══════════════════════════════════════════════════════════════════════════
+
+test("REAL-ATLAS: /dashboard deltas match the exact transactions performed", async () => {
+  const before = await get(`/api/v1/dashboard?businessId=${a.biz.id}&shopId=${a.shop.id}`, a.owner.accessToken);
+  assert.equal(before.status, 200);
+  assert.equal(before.body.data.scope.businessId, a.biz.id);
+
+  // One cash sale: 2 x 20000, no product tax on this seed -> total 40000.
+  const sale = await post("/api/v1/sales", a.owner.accessToken, {
+    businessId: a.biz.id,
+    shopId: a.shop.id,
+    customerId: a.customer.id,
+    items: [{ productId: a.product.id, qty: 2, unitPrice: 20000 }],
+    paidAmount: 40000,
+    accountId: a.account.id,
+    localId: uid("dash-sale"),
+  });
+  assert.equal(sale.status, 201, JSON.stringify(sale.body));
+  const saleTotal = sale.body.data.total as number;
+  const salePaid = sale.body.data.paidAmount as number;
+
+  // One expense out of the same account.
+  const expAmount = 7000;
+  const exp = await post("/api/v1/expenses", a.owner.accessToken, {
+    businessId: a.biz.id,
+    shopId: a.shop.id,
+    category: "TRANSPORT",
+    amount: expAmount,
+    paymentAccountId: a.account.id,
+    localId: uid("dash-exp"),
+  });
+  assert.equal(exp.status, 201, JSON.stringify(exp.body));
+
+  const afterRes = await get(`/api/v1/dashboard?businessId=${a.biz.id}&shopId=${a.shop.id}`, a.owner.accessToken);
+  assert.equal(afterRes.status, 200);
+  const d = afterRes.body.data;
+
+  // Independent expectation from the API responses above.
+  assert.equal(d.today.salesCount - before.body.data.today.salesCount, 1);
+  assert.equal(d.today.salesTotal - before.body.data.today.salesTotal, saleTotal);
+  assert.equal(d.today.salesPaid - before.body.data.today.salesPaid, salePaid);
+  assert.equal(d.today.expensesCount - before.body.data.today.expensesCount, 1);
+  assert.equal(d.today.expensesTotal - before.body.data.today.expensesTotal, expAmount);
+  // Cash moved exactly +salePaid -expense through the snapshotted account.
+  const acctRow = d.cash.accounts.find((x: { id: string }) => x.id === a.account.id);
+  const acctBefore = before.body.data.cash.accounts.find((x: { id: string }) => x.id === a.account.id);
+  assert.ok(acctRow && acctBefore);
+  assert.equal(acctRow.currentBalance - acctBefore.currentBalance, salePaid - expAmount);
+  // Recent activity contains the new sale with its real invoice number.
+  const recentSale = d.recentTransactions.find(
+    (r: { type: string; id: string }) => r.type === "SALE" && r.id === sale.body.data.id
+  );
+  assert.ok(recentSale, "new sale must appear in recentTransactions");
+  assert.equal(recentSale.amount, saleTotal);
+});
+
+test("REAL-ATLAS: /reports/sales daily+product figures reconcile with the raw Atlas documents", async () => {
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const res = await get(
+    `/api/v1/reports/sales?businessId=${a.biz.id}&shopId=${a.shop.id}&groupBy=daily&from=${dayKey}&to=${dayKey}`,
+    a.owner.accessToken
+  );
+  assert.equal(res.status, 200);
+  const bucket = (res.body.data.items as Array<{ key: string; count: number; total: number }>).find(
+    (r) => r.key === dayKey
+  );
+
+  // Independent recomputation straight from the persisted Sale collection.
+  const docs = await Sale.find({
+    businessId: OBJ(a.biz.id),
+    shopId: OBJ(a.shop.id),
+    status: "COMPLETED",
+    saleDate: {
+      $gte: new Date(`${dayKey}T00:00:00.000Z`),
+      $lte: new Date(new Date(`${dayKey}T00:00:00.000Z`).getTime() + 86400000 - 1),
+    },
+  });
+  const expectedTotal = docs.reduce((s, x) => s + x.total, 0);
+  assert.ok(bucket, "today's bucket must exist");
+  assert.equal(bucket!.count, docs.length);
+  assert.equal(bucket!.total, expectedTotal);
+
+  // Product dimension exists and carries integer-paisa fields.
+  const byProduct = await get(
+    `/api/v1/reports/sales?businessId=${a.biz.id}&shopId=${a.shop.id}&groupBy=product&limit=100`,
+    a.owner.accessToken
+  );
+  assert.equal(byProduct.status, 200);
+  for (const row of byProduct.body.data.items as Array<Record<string, number | string>>) {
+    assert.ok(Number.isInteger(row.salesTotal));
+    assert.ok(Number.isInteger(row.grossProfit));
+    assert.ok(row.qtySold > 0);
+  }
+});
+
+test("REAL-ATLAS: /reports/inventory valuation equals stock x avgCost summed in Atlas", async () => {
+  const res = await get(
+    `/api/v1/reports/inventory?businessId=${a.biz.id}`,
+    a.owner.accessToken
+  );
+  assert.equal(res.status, 200);
+  const s = res.body.data.summary;
+
+  // Independent recomputation from the Product collection.
+  const products = await Product.find({ businessId: OBJ(a.biz.id) });
+  const expectedValue = products.reduce((sum, p) => sum + p.currentStock * p.avgCost, 0);
+  const expectedUnits = products.reduce((sum, p) => sum + p.currentStock, 0);
+  assert.equal(s.productCount, products.length);
+  assert.equal(s.totalUnits, expectedUnits);
+  assert.equal(s.stockValue, expectedValue);
+});
+
+test("REAL-ATLAS: /reports/receivables + /reports/payables totals equal Atlas dues", async () => {
+  const rec = await get(`/api/v1/reports/receivables?businessId=${a.biz.id}`, a.owner.accessToken);
+  const pay = await get(`/api/v1/reports/payables?businessId=${a.biz.id}`, a.owner.accessToken);
+  assert.equal(rec.status, 200);
+  assert.equal(pay.status, 200);
+
+  const recDocs = await Customer.find({ businessId: OBJ(a.biz.id), currentDue: { $gt: 0 } });
+  const payDocs = await Supplier.find({ businessId: OBJ(a.biz.id), currentPayable: { $gt: 0 } });
+  assert.equal(rec.body.data.totals.total, recDocs.reduce((s, c) => s + c.currentDue, 0));
+  assert.equal(rec.body.data.totals.count, recDocs.length);
+  assert.equal(pay.body.data.totals.total, payDocs.reduce((s, x) => s + x.currentPayable, 0));
+  assert.equal(pay.body.data.totals.count, payDocs.length);
+});
+
+test("REAL-ATLAS: /search finds seeded Atlas documents; foreign tenant does not leak", async () => {
+  const marker = uid("srch").slice(0, 8);
+  await post("/api/v1/products", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: `Atlas Search ${marker} Product`,
+    unit: "piece",
+    sellingPrice: 555,
+  });
+
+  const mine = await get(`/api/v1/search?businessId=${a.biz.id}&q=${marker}`, a.owner.accessToken);
+  assert.equal(mine.status, 200);
+  assert.equal(mine.body.data.products.length, 1);
+  assert.equal(mine.body.data.products[0].sellingPrice, 555);
+
+  const theirs = await get(`/api/v1/search?businessId=${b.biz.id}&q=${marker}`, b.owner.accessToken);
+  assert.equal(theirs.status, 200);
+  assert.deepEqual(theirs.body.data.products, []);
+
+  // RBAC parity with catalog reads: any active member may search.
+  const anon = await request(app).get(`/api/v1/search?q=${marker}&businessId=${a.biz.id}`);
+  assert.equal(anon.status, 401);
+});
