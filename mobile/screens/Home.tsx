@@ -10,6 +10,7 @@ import { BusinessSwitcherScreen } from "./BusinessSwitcher";
 import { ShopSwitcherScreen } from "./ShopSwitcher";
 import { BusinessSettingsScreen } from "./BusinessSettings";
 import { ShopManagementScreen } from "./ShopManagement";
+import { AccountingScreen } from "./Accounting";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
 
@@ -33,6 +34,7 @@ export function Home() {
   if (overlay === "shopSwitcher") return <ShopSwitcherScreen onDone={() => setOverlay(null)} />;
   if (overlay === "businessSettings") return <BusinessSettingsScreen onDone={() => setOverlay(null)} />;
   if (overlay === "shopManagement") return <ShopManagementScreen onDone={() => setOverlay(null)} />;
+  if (overlay === "accounting") return <AccountingScreen onDone={() => setOverlay(null)} />;
 
   return (
     <View style={styles.container}>

@@ -12,6 +12,7 @@ import { ApiError, authRequest } from "../src/api";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
+import { formatTaka } from "../src/money";
 import { newLocalId } from "../src/localId";
 
 interface StockRow {
@@ -26,11 +27,22 @@ interface StockRow {
   lowStock: boolean;
 }
 
+interface StockListResponse {
+  data: {
+    items: StockRow[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  };
+}
+
+const PAGE_SIZE = 50;
+
 export function StockSection() {
   const { t } = useI18n();
   const { activeBusinessId, activeShopId } = useAuth();
   const [rows, setRows] = useState<StockRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lowOnly, setLowOnly] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -50,28 +62,35 @@ export function StockSection() {
   const bizId = activeBusinessId ?? "";
   const shopId = activeShopId ?? "";
 
-  const load = useCallback(async () => {
-    if (!bizId || !shopId) {
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await authRequest<{ data: { items: StockRow[] } }>(
-        `/api/v1/inventory/stock?businessId=${encodeURIComponent(bizId)}&shopId=${encodeURIComponent(shopId)}&limit=100${lowOnly ? "&lowStock=true" : ""}`
-      );
-      setRows(res.data.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("genericError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [bizId, shopId, lowOnly, t]);
+  const load = useCallback(
+    async (page = 1, append = false) => {
+      if (!bizId || !shopId) {
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+      if (page === 1) setLoading(true);
+      else setLoadingMore(true);
+      setError(null);
+      try {
+        const res = await authRequest<StockListResponse>(
+          `/api/v1/inventory/stock?businessId=${encodeURIComponent(bizId)}&shopId=${encodeURIComponent(shopId)}&page=${page}&limit=${PAGE_SIZE}${lowOnly ? "&lowStock=true" : ""}`
+        );
+        const { items, pagination } = res.data;
+        setRows((prev) => (append ? [...prev, ...items] : items));
+        setHasMore(page < pagination.totalPages);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t("genericError"));
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [bizId, shopId, lowOnly, t]
+  );
 
   useEffect(() => {
-    load();
+    load(1, false);
   }, [load]);
 
   const submitAdjust = async () => {
@@ -108,7 +127,7 @@ export function StockSection() {
       setAdjProductId("");
       setAdjQty("");
       setAdjReason("");
-      await load();
+      await load(1, false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("genericError"));
     } finally {
@@ -143,7 +162,7 @@ export function StockSection() {
       setOpeningOpen(false);
       setOpenProductId("");
       setOpenQty("");
-      await load();
+      await load(1, false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("genericError"));
     } finally {
@@ -171,6 +190,13 @@ export function StockSection() {
         <FlatList
           data={rows}
           keyExtractor={(r) => r.id}
+          onEndReached={() => {
+            if (hasMore && !loadingMore) load(Math.ceil(rows.length / PAGE_SIZE) + 1, true);
+          }}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator style={{ marginTop: 12 }} color={colors.primary} /> : null
+          }
           renderItem={({ item }) => (
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
@@ -178,6 +204,11 @@ export function StockSection() {
                 <Text style={styles.rowMeta}>
                   {item.sku || item.unit} · min {item.minStock}
                 </Text>
+                {item.avgCost > 0 ? (
+                  <Text style={styles.rowMeta}>
+                    {t("avgCost")}: {formatTaka(item.avgCost)}
+                  </Text>
+                ) : null}
               </View>
               <View style={{ alignItems: "flex-end" }}>
                 <Text style={[styles.rowStock, item.currentStock < 0 && { color: "#C0392B" }]}>

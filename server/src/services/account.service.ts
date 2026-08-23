@@ -4,6 +4,11 @@ import { AccountType, DEFAULT_CASH_ACCOUNT_NAME } from "../config/accounts";
 import { membershipFor, isDuplicateKeyError } from "./membership";
 import { ApiError } from "../utils/ApiError";
 import { assertSafePaisa } from "../utils/money";
+import { writeJournal } from "./journal.service";
+import { journalAssetAccountFor } from "../config/accounts";
+import { AuditLog } from "../models/AuditLog";
+import { JournalEntry } from "../models/JournalEntry";
+import { withTransaction } from "../db/transactions";
 
 export interface CreateAccountInput {
   businessId: string;
@@ -187,4 +192,161 @@ export async function getDefaultCashAccount(businessId: string, shopId: string) 
     shopId: new Types.ObjectId(shopId),
     name: DEFAULT_CASH_ACCOUNT_NAME,
   });
+}
+
+// ── Phase 07 — account-to-account cash transfer ────────────────────────────
+
+const TRANSFER_ROLES = ["Owner", "Admin", "Manager", "Accountant"] as const;
+
+export interface CashTransferInput {
+  businessId: string;
+  shopId: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  note?: string | null;
+  localId?: string | null;
+}
+
+export interface CashTransferResult {
+  journalEntryId: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  duplicate: boolean;
+}
+
+/**
+ * Move money between two accounts of the SAME business + shop.
+ *
+ * Journal (phase-07.md): Dr destination asset / Cr source asset. The source
+ * decrement is the guarded atomic one used by every financial service, so an
+ * over-draft aborts the whole transaction with zero side effects.
+ *
+ * Idempotency: `localId` anchors on the JournalEntry's unique partial index
+ * {businessId, referenceType, localId} — a retried or concurrent transfer
+ * resolves to the original entry (`duplicate:true`) with zero extra effect.
+ */
+export async function transferCash(userId: string, input: CashTransferInput): Promise<CashTransferResult> {
+  const membership = await assertAccess(userId, input.businessId, input.shopId);
+  if (!(TRANSFER_ROLES as readonly string[]).includes(membership.role)) {
+    throw ApiError.forbidden("Insufficient role");
+  }
+  if (!Types.ObjectId.isValid(input.fromAccountId) || !Types.ObjectId.isValid(input.toAccountId)) {
+    throw ApiError.notFound("Account not found");
+  }
+  assertSafePaisa(input.amount, "amount");
+  if (input.amount <= 0) throw ApiError.badRequest("amount must be positive paisa");
+  if (input.fromAccountId === input.toAccountId) {
+    throw ApiError.badRequest("Source and destination accounts must be different");
+  }
+
+  const result = await withTransaction(async (session) => {
+    // Offline-sync idempotency: same localId never moves money twice.
+    if (input.localId) {
+      const existing = await JournalEntry.findOne({
+        businessId: new Types.ObjectId(input.businessId),
+        referenceType: "CASH_TRANSFER",
+        localId: input.localId,
+      }).session(session);
+      if (existing) {
+        const { JournalLine } = await import("../models/JournalLine");
+        const firstLine = await JournalLine.findOne({ entryId: existing._id }).session(session);
+        return {
+          journalEntryId: String(existing._id),
+          fromAccountId: input.fromAccountId,
+          toAccountId: input.toAccountId,
+          amount: firstLine?.debit ?? input.amount,
+          duplicate: true,
+        };
+      }
+    }
+
+    const from = await Account.findOne({
+      _id: new Types.ObjectId(input.fromAccountId),
+      businessId: new Types.ObjectId(input.businessId),
+      shopId: new Types.ObjectId(input.shopId),
+    }).session(session);
+    if (!from) throw ApiError.notFound("Account not found");
+    const to = await Account.findOne({
+      _id: new Types.ObjectId(input.toAccountId),
+      businessId: new Types.ObjectId(input.businessId),
+      shopId: new Types.ObjectId(input.shopId),
+    }).session(session);
+    if (!to) throw ApiError.notFound("Account not found");
+
+    // Guarded atomic source decrement; aborts everything on insufficient funds.
+    await decrementBalance(input.businessId, input.shopId, input.fromAccountId, input.amount, session);
+    await incrementBalance(input.businessId, input.shopId, input.toAccountId, input.amount, session);
+
+    const fromAsset = journalAssetAccountFor(from.type);
+    const toAsset = journalAssetAccountFor(to.type);
+
+    let journalResult;
+    try {
+      journalResult = await writeJournal(
+        {
+          businessId: input.businessId,
+          shopId: input.shopId,
+          description: input.note?.trim()
+            ? `Cash transfer — ${input.note.trim()}`
+            : "Cash transfer between accounts",
+          referenceType: "CASH_TRANSFER",
+          referenceId: null,
+          localId: input.localId ?? null,
+          lines: [
+            { accountName: toAsset.name, accountType: toAsset.accountType, debit: input.amount, credit: 0 },
+            { accountName: fromAsset.name, accountType: fromAsset.accountType, debit: 0, credit: input.amount },
+          ],
+        },
+        session
+      );
+    } catch (err) {
+      // Duplicate-key recovery: a concurrent twin won the unique index race.
+      if (!isDuplicateKeyError(err)) throw err;
+      const winner = await JournalEntry.findOne({
+        businessId: new Types.ObjectId(input.businessId),
+        referenceType: "CASH_TRANSFER",
+        localId: input.localId ?? "",
+      }).session(session);
+      if (!winner) throw err;
+      return {
+        journalEntryId: String(winner._id),
+        fromAccountId: input.fromAccountId,
+        toAccountId: input.toAccountId,
+        amount: 0,
+        duplicate: true,
+      };
+    }
+
+    await AuditLog.create(
+      [
+        {
+          userId: new Types.ObjectId(userId),
+          businessId: new Types.ObjectId(input.businessId),
+          action: "CASH_TRANSFERRED",
+          ip: null,
+          details: JSON.stringify({
+            journalEntryId: String(journalResult.entry._id),
+            fromAccountId: input.fromAccountId,
+            toAccountId: input.toAccountId,
+            amount: input.amount,
+            shopId: input.shopId,
+            note: input.note ?? null,
+          }),
+        },
+      ],
+      { session: session ?? undefined, ordered: true }
+    );
+
+    return {
+      journalEntryId: String(journalResult.entry._id),
+      fromAccountId: input.fromAccountId,
+      toAccountId: input.toAccountId,
+      amount: input.amount,
+      duplicate: false,
+    };
+  });
+
+  return result;
 }

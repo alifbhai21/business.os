@@ -23,6 +23,7 @@ import purchaseRoutes from "./routes/purchase.routes";
 import invoiceRoutes from "./routes/invoice.routes";
 import inventoryRoutes from "./routes/inventory.routes";
 import transferRoutes from "./routes/transfer.routes";
+import accountingRoutes from "./routes/accounting.routes";
 
 const env = loadEnv();
 
@@ -83,6 +84,7 @@ app.use("/api/v1/purchases", purchaseRoutes);
 app.use("/api/v1/invoices", invoiceRoutes);
 app.use("/api/v1/inventory", inventoryRoutes);
 app.use("/api/v1/transfers", transferRoutes);
+app.use("/api/v1/accounting", accountingRoutes);
 
 // --- 404 ---
 app.use((_req: Request, _res: Response, next: NextFunction) => {

@@ -4,13 +4,22 @@ import { requireAuth } from "../middleware/auth";
 import { resolveBusiness, assertShopAccess } from "../middleware/tenant";
 import { requireRole } from "../middleware/rbac";
 import { validateBody } from "../middleware/validate";
-import { accountCreateSchema, accountUpdateSchema } from "../validation/account.schemas";
+import { accountCreateSchema, accountUpdateSchema, accountTransferSchema } from "../validation/account.schemas";
 
 const router = Router();
 
 router.use(requireAuth);
 
 router.get("/", resolveBusiness, assertShopAccess, controller.listAccounts);
+// Phase 07 — cash transfer (declared before /:id routes for clarity).
+router.post(
+  "/transfer",
+  resolveBusiness,
+  assertShopAccess,
+  requireRole("Owner", "Admin", "Manager", "Accountant"),
+  validateBody(accountTransferSchema),
+  controller.transferCash
+);
 router.post(
   "/",
   resolveBusiness,

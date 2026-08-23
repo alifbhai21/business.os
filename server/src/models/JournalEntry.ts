@@ -16,6 +16,7 @@ export const JOURNAL_REFERENCE_TYPES = [
   "PURCHASE_RETURN",
   "PAYMENT",
   "EXPENSE",
+  "CASH_TRANSFER",
   "REVERSAL",
 ] as const;
 export type JournalReferenceType = (typeof JOURNAL_REFERENCE_TYPES)[number];
@@ -27,6 +28,8 @@ export interface JournalEntryDocument extends Document {
   description: string;
   referenceType: JournalReferenceType;
   referenceId: Types.ObjectId | null;
+  /** Offline-sync idempotency anchor (unique per business+referenceType). */
+  localId: string | null;
   isReversal: boolean;
   reversesEntryId: Types.ObjectId | null;
   createdAt: Date;
@@ -41,6 +44,7 @@ const journalEntrySchema = new Schema<JournalEntryDocument>(
     description: { type: String, required: true, trim: true, maxlength: 200 },
     referenceType: { type: String, enum: JOURNAL_REFERENCE_TYPES, required: true },
     referenceId: { type: Schema.Types.ObjectId, default: null },
+    localId: { type: String, default: null, trim: true, maxlength: 80 },
     isReversal: { type: Boolean, default: false },
     reversesEntryId: { type: Schema.Types.ObjectId, default: null, ref: "JournalEntry" },
   },
@@ -54,5 +58,10 @@ journalEntrySchema.index({ businessId: 1, shopId: 1, date: 1 });
 journalEntrySchema.index({ referenceType: 1, referenceId: 1 });
 // Reversal traceability.
 journalEntrySchema.index({ reversesEntryId: 1 });
+// Offline-sync idempotency: one journal per business/reference/localId.
+journalEntrySchema.index(
+  { businessId: 1, referenceType: 1, localId: 1 },
+  { unique: true, partialFilterExpression: { localId: { $type: "string" } } }
+);
 
 export const JournalEntry = model<JournalEntryDocument>("JournalEntry", journalEntrySchema);

@@ -30,6 +30,15 @@ interface DocRow {
   items: DocItem[];
 }
 
+interface DocListResponse {
+  data: {
+    items: DocRow[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  };
+}
+
+const PAGE_SIZE = 50;
+
 /**
  * Phase 06 — Returns. One section handles both directions: pick a completed
  * sale (stock comes back) or a completed purchase (stock goes out), then
@@ -42,6 +51,8 @@ export function ReturnsSection() {
   const [direction, setDirection] = useState<"sale" | "purchase">("sale");
   const [docs, setDocs] = useState<DocRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [returnDoc, setReturnDoc] = useState<DocRow | null>(null);
   const [qtys, setQtys] = useState<Record<string, string>>({});
@@ -51,30 +62,37 @@ export function ReturnsSection() {
   const bizId = activeBusinessId ?? "";
   const shopId = activeShopId ?? "";
 
-  const load = useCallback(async () => {
-    if (!bizId || !shopId) {
-      setDocs([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const base =
-        direction === "sale" ? "/api/v1/sales" : "/api/v1/purchases";
-      const res = await authRequest<{ data: { items: DocRow[] } }>(
-        `${base}?businessId=${encodeURIComponent(bizId)}&shopId=${encodeURIComponent(shopId)}&status=COMPLETED&limit=50`
-      );
-      setDocs(res.data.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("genericError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [bizId, shopId, direction, t]);
+  const load = useCallback(
+    async (page = 1, append = false) => {
+      if (!bizId || !shopId) {
+        setDocs([]);
+        setLoading(false);
+        return;
+      }
+      if (page === 1) setLoading(true);
+      else setLoadingMore(true);
+      setError(null);
+      try {
+        const base =
+          direction === "sale" ? "/api/v1/sales" : "/api/v1/purchases";
+        const res = await authRequest<DocListResponse>(
+          `${base}?businessId=${encodeURIComponent(bizId)}&shopId=${encodeURIComponent(shopId)}&status=COMPLETED&page=${page}&limit=${PAGE_SIZE}`
+        );
+        const { items, pagination } = res.data;
+        setDocs((prev) => (append ? [...prev, ...items] : items));
+        setHasMore(page < pagination.totalPages);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t("genericError"));
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [bizId, shopId, direction, t]
+  );
 
   useEffect(() => {
-    load();
+    load(1, false);
   }, [load]);
 
   const openReturnModal = (doc: DocRow) => {
@@ -124,7 +142,7 @@ export function ReturnsSection() {
         }
       );
       setReturnDoc(null);
-      await load();
+      await load(1, false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("genericError"));
     } finally {
@@ -147,6 +165,13 @@ export function ReturnsSection() {
         <FlatList
           data={docs}
           keyExtractor={(d) => d.id}
+          onEndReached={() => {
+            if (hasMore && !loadingMore) load(Math.ceil(docs.length / PAGE_SIZE) + 1, true);
+          }}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator style={{ marginTop: 12 }} color={colors.primary} /> : null
+          }
           renderItem={({ item }) => (
             <View style={styles.row}>
               <View style={{ flex: 1 }}>

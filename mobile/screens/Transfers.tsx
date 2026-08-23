@@ -21,6 +21,14 @@ interface TransferRow {
   productId: string;
   quantity: number;
   status: string;
+  createdAt: string;
+}
+
+interface TransferListResponse {
+  data: {
+    items: TransferRow[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  };
 }
 
 interface ProductLite {
@@ -40,6 +48,8 @@ const STATUS_KEY: Record<string, string> = {
   CANCELLED: "cancelled",
 };
 
+const PAGE_SIZE = 50;
+
 /** Phase 06 — stock transfers between the business's own shops. */
 export function TransfersSection() {
   const { t } = useI18n();
@@ -47,6 +57,8 @@ export function TransfersSection() {
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [products, setProducts] = useState<ProductLite[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,25 +72,32 @@ export function TransfersSection() {
   const bizId = activeBusinessId ?? "";
   const shopId = activeShopId ?? "";
 
-  const load = useCallback(async () => {
-    if (!bizId || !shopId) {
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await authRequest<{ data: { items: TransferRow[] } }>(
-        `/api/v1/transfers?businessId=${encodeURIComponent(bizId)}&shopId=${encodeURIComponent(shopId)}&limit=100`
-      );
-      setRows(res.data.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("genericError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [bizId, shopId, t]);
+  const load = useCallback(
+    async (page = 1, append = false) => {
+      if (!bizId || !shopId) {
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+      if (page === 1) setLoading(true);
+      else setLoadingMore(true);
+      setError(null);
+      try {
+        const res = await authRequest<TransferListResponse>(
+          `/api/v1/transfers?businessId=${encodeURIComponent(bizId)}&shopId=${encodeURIComponent(shopId)}&page=${page}&limit=${PAGE_SIZE}`
+        );
+        const { items, pagination } = res.data;
+        setRows((prev) => (append ? [...prev, ...items] : items));
+        setHasMore(page < pagination.totalPages);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t("genericError"));
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [bizId, shopId, t]
+  );
 
   const loadProducts = useCallback(async () => {
     if (!bizId) return;
@@ -136,7 +155,7 @@ export function TransfersSection() {
       setDestShopId("");
       setProductId("");
       setQuantity("1");
-      await load();
+      await load(1, false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("genericError"));
     } finally {
@@ -171,14 +190,24 @@ export function TransfersSection() {
         <FlatList
           data={rows}
           keyExtractor={(r) => r.id}
+          onEndReached={() => {
+            if (hasMore && !loadingMore) load(Math.ceil(rows.length / PAGE_SIZE) + 1, true);
+          }}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator style={{ marginTop: 12 }} color={colors.primary} /> : null
+          }
           renderItem={({ item }) => (
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.rowName}>
+                <Text style={styles.rowName} numberOfLines={1}>
                   {shopName(item.sourceShopId)} → {shopName(item.destShopId)}
                 </Text>
                 <Text style={styles.rowMeta}>
-                  ×{item.quantity} · {t(STATUS_KEY[item.status] ?? "pending")}
+                  #{item.id.slice(-6).toUpperCase()} · ×{item.quantity}
+                </Text>
+                <Text style={styles.rowMeta}>
+                  {t(STATUS_KEY[item.status] ?? "pending")} · {new Date(item.createdAt).toLocaleDateString()}
                 </Text>
               </View>
               {item.status === "PENDING" || item.status === "IN_TRANSIT" ? (

@@ -345,7 +345,9 @@ test("void: sale journal reversal is symmetric and the original is untouched", a
   const before = await originalEntry(bizA.id, "SALE", sale.id);
   assert.ok(before);
   const beforeLines = await linesOf(before!._id as mongoose.Types.ObjectId);
-  assert.equal(beforeLines.length, 3); // Cash / Sales Revenue / Tax Payable
+  // Phase 07: Cash / Sales Revenue / Tax Payable + COGS / Inventory legs
+  // (product costPrice 6000 × qty 2 = 12000 COGS).
+  assert.equal(beforeLines.length, 5);
 
   await voidSale(ownerA.user.id, bizA.id, shopA.id, sale.id);
 
@@ -371,9 +373,14 @@ test("void: sale journal reversal is symmetric and the original is untouched", a
     revLines.reduce((s, l) => s + l.debit, 0),
     revLines.reduce((s, l) => s + l.credit, 0)
   );
-  assert.equal(revLines.reduce((s, l) => s + l.debit, 0), 11000);
+  assert.equal(revLines.reduce((s, l) => s + l.debit, 0), 23000); // 11000 money + 12000 COGS
   const cash = revLines.find((l) => l.accountName === JOURNAL_ACCOUNTS.CASH);
   assert.equal(cash!.credit, 11000); // cash went back out
+  // Phase 07: the reversal restores Inventory and reverses COGS.
+  const cogsRev = revLines.find((l) => l.accountName === "Cost of Goods Sold");
+  const invRev = revLines.find((l) => l.accountName === JOURNAL_ACCOUNTS.INVENTORY);
+  assert.equal(cogsRev!.credit, 12000);
+  assert.equal(invRev!.debit, 12000);
 });
 
 test("void: SALE_VOIDED audit log records the reversal reference", async () => {

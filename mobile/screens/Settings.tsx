@@ -6,7 +6,12 @@ import { useI18n } from "../src/i18n";
 import { colors, typeLabels } from "../src/theme";
 import { useAuth } from "../src/auth";
 
-export type SettingsRoute = "businessSwitcher" | "shopSwitcher" | "businessSettings" | "shopManagement";
+export type SettingsRoute =
+  | "businessSwitcher"
+  | "shopSwitcher"
+  | "businessSettings"
+  | "shopManagement"
+  | "accounting";
 
 export function SettingsScreen({ onNavigate }: { onNavigate?: (route: SettingsRoute) => void }) {
   const { t, lang, setLang } = useI18n();
@@ -48,6 +53,7 @@ export function SettingsScreen({ onNavigate }: { onNavigate?: (route: SettingsRo
               <Button title={t("shopSwitcher")} onPress={() => onNavigate("shopSwitcher")} variant="secondary" />
               <Button title={t("businessSettings")} onPress={() => onNavigate("businessSettings")} variant="secondary" />
               <Button title={t("shopManagement")} onPress={() => onNavigate("shopManagement")} variant="secondary" />
+              <Button title={t("accounting")} onPress={() => onNavigate("accounting")} variant="secondary" />
             </View>
           </>
         )}

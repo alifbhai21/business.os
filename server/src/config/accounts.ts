@@ -45,15 +45,23 @@ export const JOURNAL_ACCOUNTS = {
   MOBILE_MONEY: "Mobile Money",
   CARD: "Card",
   SALES_REVENUE: "Sales Revenue",
+  SALES_RETURNS: "Sales Returns",
+  COST_OF_GOODS_SOLD: "Cost of Goods Sold",
   INVENTORY: "Inventory",
   CUSTOMER_RECEIVABLE: "Customer Receivable",
   SUPPLIER_PAYABLE: "Supplier Payable",
   TAX_PAYABLE: "Tax Payable",
   TAX_RECEIVABLE: "Tax Receivable",
+  PURCHASE_RETURNS: "Purchase Returns",
 } as const;
 export type JournalAccountName = (typeof JOURNAL_ACCOUNTS)[keyof typeof JOURNAL_ACCOUNTS];
 
-/** Nominal accounting classification of each journal account concept. */
+/** Nominal accounting classification of each journal account concept.
+ *
+ * Contra accounts reuse their host class so P&L aggregation nets naturally:
+ *  - SALES_RETURNS is debit-normal inside REVENUE (nets against Sales Revenue).
+ *  - PURCHASE_RETURNS is credit-normal inside EXPENSE (nets against opex).
+ */
 export const JOURNAL_ACCOUNT_TYPES = {
   [JOURNAL_ACCOUNTS.CASH]: "ASSET",
   [JOURNAL_ACCOUNTS.BANK]: "ASSET",
@@ -67,6 +75,9 @@ export const JOURNAL_ACCOUNT_TYPES = {
   // output tax collected on sales (TAX_PAYABLE).
   [JOURNAL_ACCOUNTS.TAX_RECEIVABLE]: "ASSET",
   [JOURNAL_ACCOUNTS.SALES_REVENUE]: "REVENUE",
+  [JOURNAL_ACCOUNTS.SALES_RETURNS]: "REVENUE",
+  [JOURNAL_ACCOUNTS.COST_OF_GOODS_SOLD]: "EXPENSE",
+  [JOURNAL_ACCOUNTS.PURCHASE_RETURNS]: "EXPENSE",
 } as const;
 export type JournalAccountType =
   | "ASSET"

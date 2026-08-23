@@ -50,14 +50,14 @@ The PRD requires tracking all inventory movements (opening, purchases, sales, re
 
 ### Mobile
 
-- [x] Inventory screen (stock list + low stock filter) (`mobile/screens/Inventory.tsx`)
-- [x] Stock movements screen (`mobile/screens/StockMovements.tsx`)
+- [x] Inventory screen (stock list + low stock filter, avg cost display, load-more pagination) (`mobile/screens/Inventory.tsx`)
+- [x] Stock movements screen (product name, signed qty, prev→new, refType, date, pagination) (`mobile/screens/StockMovements.tsx`)
 - [x] Adjust stock modal (in Inventory screen)
 - [x] Opening stock modal (in Inventory screen)
-- [x] Sales return screen + Purchase return screen (`mobile/screens/Returns.tsx` — direction chips; sends only productId/qty/reason/localId, never financial values)
-- [x] Stock transfer screen (`mobile/screens/Transfers.tsx` — source → dest → product → qty, receive/cancel actions)
+- [x] Sales return screen + Purchase return screen (`mobile/screens/Returns.tsx` — direction chips; sends only productId/qty/reason/localId, never financial values; server `returnedQty` bounds the per-line input; pagination)
+- [x] Stock transfer screen (`mobile/screens/Transfers.tsx` — source → dest → product → qty, receive/cancel actions, reference id + created date, pagination)
 - [x] Wired as 6th "Inventory" tab in Home (`mobile/screens/InventoryHub.tsx`, `Home.tsx`)
-- [x] bn/en i18n strings for all Phase 06 features
+- [x] bn/en i18n strings for all Phase 06 features (incl. `avgCost`)
 
 ### Testing
 
@@ -103,9 +103,17 @@ The PRD requires tracking all inventory movements (opening, purchases, sales, re
 ## Known Limitations / Decisions for Later Phases
 - Returns reverse value proportionally to the ORIGINAL document totals (no per-line tax recompute); Phase 07 reporting reads these entries as-is.
 - No average-cost adjustment on purchase returns (cost basis stays historical; consistent with void policy).
-- No dedicated return listing endpoint yet (returns visible via movements + journal; add `/returns` register if reporting needs it).
+- No dedicated return listing endpoint yet (returns visible via movements + journal; add `/returns` register if reporting needs it). The mobile Returns screen therefore lists COMPLETED sale/purchase documents and drives the return flow from them.
 - Transfers move quantity only (unitCost snapshot carried; no inter-branch cost variance accounting until Phase 07).
+- Pull-to-refresh is not used anywhere in the app; screens reload on mount, business/shop change, and after each mutation (consistent with the app convention).
+- Movement product names are resolved client-side from `GET /products` (presentation-only join; fallback to a short id) — stock figures themselves are never computed on the client.
 - Mobile runtime verification still pending (no emulator/device available — same caveat as Phase 05).
+
+## Final Verification (2026-08-23)
+- Backend: `npm run typecheck` — PASS (0 errors); `npm test` — 444/444 pass, 0 failed, 0 skipped, process terminates normally.
+- Mobile: `npx tsc --noEmit` — PASS (0 errors).
+- MongoDB Atlas: `/ready` → 200 `{db:"connected"}`, admin ping OK (`MONGODB_URI` from gitignored `server/.env`; success log masks credentials).
+- Security spot-audit: tenant/shop scoping asserted in every list/mutation service path (`assertAccess` + businessId filter + `$or` shop scope for transfers); `.strict()` schemas reject server-owned fields; localId idempotency retained on transfers/returns/adjust/opening payloads.
 
 ## Status
 - [ ] Not started

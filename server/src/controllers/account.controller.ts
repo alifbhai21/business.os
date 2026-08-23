@@ -44,3 +44,10 @@ export const updateAccount = asyncHandler(async (req: Request, res: Response) =>
   );
   return sendSuccess(res, data);
 });
+
+// Phase 07 — cash transfer between two accounts of the same shop.
+export const transferCash = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) throw ApiError.unauthorized();
+  const data = await accountService.transferCash(req.user.id, req.body);
+  return sendSuccess(res, data, data.duplicate ? 200 : 201);
+});

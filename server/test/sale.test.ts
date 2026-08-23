@@ -637,23 +637,30 @@ test("sale: journal is balanced — DEBIT cash + receivable / CREDIT revenue + t
   assert.equal(String(entry!.shopId), shopA.id);
 
   const lines = await JournalLine.find({ entryId: entry!._id });
-  assert.equal(lines.length, 4);
+  // Phase 07: the money legs + COGS/Inventory legs (costPrice 6000 × qty 2).
+  assert.equal(lines.length, 6);
   const cash = lines.find((l) => l.accountName === JOURNAL_ACCOUNTS.CASH);
   const recv = lines.find((l) => l.accountName === JOURNAL_ACCOUNTS.CUSTOMER_RECEIVABLE);
   const revenue = lines.find((l) => l.accountName === JOURNAL_ACCOUNTS.SALES_REVENUE);
   const tax = lines.find((l) => l.accountName === JOURNAL_ACCOUNTS.TAX_PAYABLE);
-  assert.ok(cash && recv && revenue && tax);
+  const cogs = lines.find((l) => l.accountName === "Cost of Goods Sold");
+  const inventory = lines.find((l) => l.accountName === JOURNAL_ACCOUNTS.INVENTORY);
+  assert.ok(cash && recv && revenue && tax && cogs && inventory);
   assert.equal(cash!.debit, 10000);
   assert.equal(recv!.debit, 12000);
   assert.equal(revenue!.credit, 20000);
   assert.equal(revenue!.accountType, "REVENUE");
   assert.equal(tax!.credit, 2000);
   assert.equal(tax!.accountType, "LIABILITY");
+  assert.equal(cogs!.debit, 12000);
+  assert.equal(cogs!.accountType, "EXPENSE");
+  assert.equal(inventory!.credit, 12000);
+  assert.equal(inventory!.accountType, "ASSET");
 
   const totalDebit = lines.reduce((s, l) => s + l.debit, 0);
   const totalCredit = lines.reduce((s, l) => s + l.credit, 0);
   assert.equal(totalDebit, totalCredit);
-  assert.equal(totalDebit, 22000);
+  assert.equal(totalDebit, 34000);
 });
 
 test("sale: AuditLog SALE_FINALIZED is written with the invoice reference", async () => {

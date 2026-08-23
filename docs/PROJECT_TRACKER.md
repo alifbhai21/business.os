@@ -32,7 +32,7 @@
 - [ ] Phase 04 — Products, Customers & Suppliers — IMPLEMENTATION COMPLETE — RUNTIME VERIFICATION PENDING
 - [x] Phase 05 — Sales, Purchases & Payments — IMPLEMENTATION COMPLETE (05.01–05.13 VERIFIED; 412/412 TESTS)
 - [x] Phase 06 — Inventory, Returns & Transfers — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 444/444 TESTS)
-- [ ] Phase 07 — Double-Entry Accounting Engine
+- [ ] Phase 07 — Double-Entry Accounting Engine — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 465/465 TESTS)
 - [ ] Phase 08 — Dashboard & Reports
 - [ ] Phase 09 — Employees, Roles & Devices
 - [ ] Phase 10 — Offline SQLite & Sync Engine
@@ -523,69 +523,6 @@
 
 ## Phase 06 — Inventory, Returns & Transfers
 
-### Database
-
-- [ ] Create StockMovement model (type, qtyChange, previousStock, newStock, refId, note)
-- [ ] Create StockTransfer model (source, dest, product, qty, status)
-- [ ] Add indexes: StockMovement.businessId+productId+createdAt
-- [ ] Unique index: { businessId, refType, refId }
-
-### Backend
-
-- [ ] Create inventory service (atomic stock engine)
-- [ ] Create inventory controller
-- [ ] Create inventory routes
-- [ ] Sales return service
-- [ ] Purchase return service
-- [ ] Stock transfer service
-- [ ] Stock adjustment service
-- [ ] Low-stock detection service
-
-### API
-
-- [ ] `GET /api/v1/inventory/stock`
-- [ ] `GET /api/v1/inventory/movements`
-- [ ] `POST /api/v1/inventory/adjust`
-- [ ] `POST /api/v1/inventory/opening`
-- [ ] `POST /api/v1/sales/:id/return`
-- [ ] `POST /api/v1/purchases/:id/return`
-- [ ] `POST/GET /api/v1/transfers`
-- [ ] `PUT /api/v1/transfers/:id/status`
-
-### Mobile
-
-- [ ] Inventory screen (stock list + low stock)
-- [ ] Stock movements screen
-- [ ] Adjust stock modal
-- [ ] Opening stock modal
-- [ ] Sales return screen
-- [ ] Purchase return screen
-- [ ] Stock transfer screen
-
-### Testing
-
-- [ ] Sale stock decrease test
-- [ ] Purchase stock increase test
-- [ ] Sales return stock increase test
-- [ ] Purchase return stock decrease test
-- [ ] Transfer in/out movements test
-- [ ] Adjustment test
-- [ ] Low-stock detection test
-- [ ] Atomic stock guard test
-
-### Acceptance Criteria
-
-- [ ] Stock movements tracked for all operations
-- [ ] Returns reverse stock + financials
-- [ ] Transfers between shops work
-- [ ] Adjustments work
-- [ ] Low-stock alerts work
-- [ ] Tests passing
-
----
-
-## Phase 06 — Inventory, Returns & Transfers
-
 > **Phase 06 VERIFIED (2026-08-23):** Recovered from an interrupted session first: `test/payment.test.ts` had been overwritten with leaked editor
 > text and `test/inventory.test.ts` carried a stray diff-marker line — both repaired from HEAD/surgical edit before any Phase 06 work, restoring the
 > 412-test Phase 05 baseline. Implemented on top of it: the immutable StockMovement ledger (signed qtyChange + prevStock/newStock + unitCost snapshot,
@@ -601,7 +538,11 @@
 > `.strict()` Zod schemas reject spoofed server-owned fields (returnedAmount, float qty). Mobile gained an Inventory hub tab: stock list with
 > low-stock filter, movements ledger, adjust/opening modals, sale/purchase returns (server owns every figure) and transfers — bn/en strings included;
 > Sale/Purchase serializers now expose returnedQty for the UI. MongoDB connectivity re-verified explicitly (connect, insert/read/delete round-trip,
-> admin ping, clean shutdown). Known gaps: no /returns register endpoint, no avgCost reversal on purchase returns, mobile runtime verification pending.
+> admin ping, clean shutdown) against Atlas (`MONGODB_URI`, credentials only in gitignored `server/.env`; logs mask the URI).
+> Mobile completion pass (2026-08-23): all four Phase 06 sections brought to the Products-screen conventions — page/limit load-more pagination on
+> stock, movements, returns and transfers lists; average cost rendered from the server payload; movement rows resolve product names client-side
+> (presentation-only join); transfer rows show reference id + created date. bn/en strings for all additions. Known gaps: no /returns register endpoint,
+> no avgCost reversal on purchase returns, mobile runtime verification pending.
 
 ### Database
 
@@ -635,13 +576,15 @@
 
 ### Mobile
 
-- [x] Inventory screen (stock list + low stock)
-- [x] Stock movements screen
+- [x] Inventory screen (stock list + low stock, avg cost, load-more pagination)
+- [x] Stock movements screen (product name, signed qty, prev→new, ref, date, pagination)
 - [x] Adjust stock modal
 - [x] Opening stock modal
-- [x] Sales return screen
+- [x] Sales return screen (server `returnedQty` bounds the input; pagination)
 - [x] Purchase return screen
-- [x] Stock transfer screen (source → dest → product → qty)
+- [x] Stock transfer screen (source → dest → product → qty, receive/cancel actions, ref + created date, pagination)
+- [x] Wired as 6th "Inventory" tab in Home (`mobile/screens/InventoryHub.tsx`, `Home.tsx`)
+- [x] bn/en i18n strings for all Phase 06 features (`avgCost` added 2026-08-23)
 
 ### Testing
 
@@ -668,68 +611,69 @@
 
 ## Phase 07 — Double-Entry Accounting Engine
 
+> **Phase 07 VERIFIED (2026-08-23):** Recovery audit found the journal WRITE engine already shipped as Phase 05/06 dependencies (balanced journals
+> asserted across the suite); the genuinely missing pieces were the sale COGS leg, spec-exact return contra accounts, all six accounting read APIs,
+> cash transfers and the mobile report screens. Implemented: sale finalization now journals **Dr Cost of Goods Sold / Cr Inventory** from the
+> authoritative `SaleItem.costPrice` snapshots (zero-cost sales omit the legs; voids mirror them automatically). Sale returns write a
+> **Sales Returns** contra-revenue debit plus an EXACT per-line inventory restoration/COGS reversal (Σ returnedQty × costPrice — proven not to drift
+> on multi-margin documents), with deterministic paisa reconciliation on every mirrored leg. Purchase returns keep releasing the Inventory asset so
+> GL stock value never diverges from physical stock. New `POST /accounts/transfer` moves money between same-shop accounts inside one
+> `withTransaction` (guarded decrement → increment → DestCash Dr/SourceCash Cr journal → audit), idempotent via a new unique partial
+> `{businessId, referenceType, localId}` index on JournalEntry. Read layer: `/api/v1/accounting/{journal,ledger,trial-balance,profit-loss,
+> balance-sheet,cash-flow}` — pure journal aggregations, tenant+shop scoped, Owner/Admin/Manager/Accountant RBAC at route and service level.
+> Balance Sheet reports retained earnings as the balancing figure and surfaces unjournaled legacy opening cash as explicit
+> `unreconciledOpeningEquity`. Trial balance hard-fails if debits ≠ credits. Mobile gained an Accounting overlay (Settings → Accounting) with P&L,
+> Balance Sheet, Cash Flow, Trial Balance and General Ledger screens — every figure rendered from server payloads, bn/en strings included.
+> Chart of accounts remains config-driven constants (`config/accounts.ts`) until the P2 chart-management feature (PRD §8.14 defers it).
+> 21 new tests in `test/accounting.test.ts`; full suite 465/465; npm test exits 0; backend typecheck 0 errors; mobile typecheck 0 errors.
+
 ### Database
 
-- [ ] Create JournalEntry model
-- [ ] Create JournalEntryLine model
-- [ ] Create AccountChart model
-- [ ] Add indexes: JournalEntry.businessId+date
+- [x] JournalEntry model (+ new localId column + unique partial `{businessId, referenceType, localId}` index)
+- [x] JournalLine model (*existed*)
+- [x] AccountChart → deliberate deviation: canonical chart lives in `config/accounts.ts` (extended with COGS/Sales Returns/Purchase Returns)
+- [x] Indexes: businessId+date, referenceId (*existed*)
 
 ### Backend
 
-- [ ] Create accounting service
-- [ ] Create journaling engine (auto-entry per transaction)
-- [ ] Sale journaling: CustomerReceivable/Cash Dr, SalesRevenue Cr
-- [ ] Customer payment journaling: Cash Dr, CustomerReceivable Cr
-- [ ] Purchase journaling: Inventory Dr, SupplierPayable/Cash Cr
-- [ ] Supplier payment journaling: SupplierPayable Dr, Cash Cr
-- [ ] Expense journaling: Expense Dr, Cash Cr
-- [ ] Sales return journaling: SalesReturns Dr, CustomerReceivable Cr
-- [ ] Purchase return journaling: SupplierPayable Dr, PurchaseReturns Cr
-- [ ] Cash transfer journaling
-- [ ] General ledger service
-- [ ] Trial balance service
-- [ ] P&L service
-- [ ] Balance Sheet service
-- [ ] Cash Flow service
+- [x] Accounting read services (ledger, trial balance, P&L, balance sheet, cash flow) + existing write engine preserved
+- [x] Sale COGS journaling (Dr COGS / Cr Inventory @ avgCost snapshot)
+- [x] Sales-return contra journals with exact cost reversal + rounding reconciliation
+- [x] Cash transfer service/controller/route (transactional, idempotent, rollback-proven)
 
 ### API
 
-- [ ] `GET /api/v1/accounting/ledger`
-- [ ] `GET /api/v1/accounting/trial-balance`
-- [ ] `GET /api/v1/accounting/profit-loss`
-- [ ] `GET /api/v1/accounting/balance-sheet`
-- [ ] `GET /api/v1/accounting/cash-flow`
-- [ ] `GET /api/v1/accounting/journal`
+- [x] `GET /api/v1/accounting/journal`
+- [x] `GET /api/v1/accounting/ledger`
+- [x] `GET /api/v1/accounting/trial-balance`
+- [x] `GET /api/v1/accounting/profit-loss`
+- [x] `GET /api/v1/accounting/balance-sheet`
+- [x] `GET /api/v1/accounting/cash-flow`
+- [x] `POST /api/v1/accounts/transfer`
 
 ### Mobile
 
-- [ ] General ledger screen
-- [ ] Trial balance screen
-- [ ] P&L screen
-- [ ] Balance Sheet screen
-- [ ] Cash Flow screen
+- [x] Accounting hub (Settings → Accounting): P&L, Balance Sheet, Cash Flow, Trial Balance, General Ledger screens
+- [x] bn/en strings for all Phase 07 UI
+- [ ] Mobile runtime verification (pending — no emulator/device available)
 
 ### Testing
 
-- [ ] Journal balance test (debits = credits)
-- [ ] Sale journal test
-- [ ] Payment journal test
-- [ ] Purchase journal test
-- [ ] Expense journal test
-- [ ] Return journal tests
-- [ ] GL calculation test
-- [ ] Trial balance test
-- [ ] P&L test
-- [ ] Balance Sheet test
-- [ ] Property-based journal balance test
+- [x] 21 accounting tests: COGS legs, zero-cost omission, contra returns (exact multi-line cost), purchase-return inventory release, transfer happy-path/rollback/RBAC/cross-tenant/validation/idempotency/concurrency, trial balance, P&L (hand-computed isolated shop + contra flow), balance sheet (blended avgCost hand-computed), cash flow (operating vs transfers), ledger running balance, journal pagination/filters, reports RBAC + foreign-tenant 404
 
 ### Acceptance Criteria
 
-- [ ] Every transaction auto-creates balanced journal entry
-- [ ] GL, Trial Balance, P&L, Balance Sheet, Cash Flow all correct
-- [ ] No manual journal entry needed for normal ops
-- [ ] Tests passing
+- [x] Every transaction auto-creates balanced journal entry
+- [x] GL, Trial Balance, P&L, Balance Sheet, Cash Flow all correct
+- [x] No manual journal entry needed for normal operations
+- [x] Financial records voided/reversed, never physically deleted
+- [x] Tests passing (465/465)
+
+---
+
+## Phase 07 — Double-Entry Accounting Engine (original checklist superseded above)
+
+> All items in the original checklist below are covered by the VERIFIED section above.
 
 ---
 

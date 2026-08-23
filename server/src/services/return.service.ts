@@ -1,4 +1,4 @@
-import { Types, ClientSession } from "mongoose";
+﻿import { Types, ClientSession } from "mongoose";
 import { Sale, SaleDocument } from "../models/Sale";
 import { Purchase, PurchaseDocument } from "../models/Purchase";
 import { StockMovement } from "../models/StockMovement";
@@ -13,6 +13,7 @@ import { StockReturn } from "../models/StockReturn";
 import { membershipFor, isDuplicateKeyError } from "./membership";
 import { incrementBalance, decrementBalance } from "./account.service";
 import { writeJournal, JournalLineInput } from "./journal.service";
+import { JOURNAL_ACCOUNTS } from "../config/accounts";
 import { toPublicSale } from "./sale.service";
 import { toPublicPurchase } from "./purchase.service";
 import { withTransaction } from "../db/transactions";
@@ -20,7 +21,7 @@ import { assertSafePaisa, roundPaisa } from "../utils/money";
 import { ApiError } from "../utils/ApiError";
 
 /**
- * Phase 06 — Sales & Purchase returns.
+ * Phase 06 â€” Sales & Purchase returns.
  *
  * A return reverses a PORTION (or all) of a completed sale/purchase:
  *   - stock is restored/removed with an immutable `sale_return`/`purchase_return`
@@ -37,7 +38,7 @@ import { ApiError } from "../utils/ApiError";
  * Concurrency safety: each line carries a `returnedQty` counter. The return
  * transaction uses a guarded atomic `$inc` (`returnedQty + qty <= originalQty`)
  * so concurrent returns can never drive the cumulative returned quantity above
- * the original quantity — no double stock restoration, no double financial
+ * the original quantity â€” no double stock restoration, no double financial
  * reversal.
  *
  * Idempotency: a `localId` makes a retried return resolve to the original
@@ -89,42 +90,159 @@ export interface PurchaseReturnInput {
  * Because the original journal is balanced (debit === credit), scaling every
  * line by the same ratio keeps the reversal balanced.
  */
-async function buildReturnJournalLines(
+/**
+ * Phase 07 â€” spec-shaped return journals.
+ *
+ * The original entry's lines are routed by account semantics (never mirrored
+ * blindly) so the P&L presents dedicated contra accounts:
+ *
+ * SALE_RETURN (per phase-07.md):
+ *   Dr Sales Returns (net revenue share)   | Cr Cash/Bank (paid share)
+ *   Dr Tax Payable (tax share)             | Cr Customer Receivable (due share)
+ *   Dr Inventory (EXACT Î£ returnedQtyÃ—costPrice) | Cr Cost of Goods Sold (same)
+ *
+ * PURCHASE_RETURN keeps the perpetual-inventory release (Cr Inventory) so the
+ * Inventory GL never diverges from physical stock value; the remaining legs
+ * mirror the original proportionally.
+ *
+ * Every independently rounded line can drift Â±1 paisa from perfect balance,
+ * so `reconcileLines` moves any residual onto the largest-magnitude line.
+ */
+
+function reconcileLines(lines: JournalLineInput[]): JournalLineInput[] {
+  let debitTotal = 0;
+  let creditTotal = 0;
+  for (const l of lines) {
+    debitTotal += l.debit;
+    creditTotal += l.credit;
+  }
+  const delta = debitTotal - creditTotal;
+  if (delta === 0) return lines;
+  if (delta > 0) {
+    // Too much debit: shave the residual off the largest debit line.
+    let target = lines[0];
+    for (const l of lines) if (l.debit > target.debit) target = l;
+    target.debit -= delta;
+  } else {
+    let target = lines[0];
+    for (const l of lines) if (l.credit > target.credit) target = l;
+    target.credit += delta;
+  }
+  return lines.filter((l) => l.debit !== 0 || l.credit !== 0);
+}
+
+export async function buildSaleReturnJournalLines(
   businessId: string,
   shopId: string,
-  referenceType: "SALE" | "PURCHASE",
-  referenceId: Types.ObjectId,
+  sale: SaleDocument,
   returnedAmount: number,
-  originalAmount: number,
+  returnedCost: number,
   session: ClientSession | null
 ): Promise<JournalLineInput[]> {
   if (returnedAmount <= 0) return [];
   const original = await JournalEntry.findOne({
     businessId: new Types.ObjectId(businessId),
     shopId: new Types.ObjectId(shopId),
-    referenceType,
-    referenceId,
+    referenceType: "SALE",
+    referenceId: sale._id as Types.ObjectId,
     isReversal: false,
   }).session(session);
   if (!original) {
-    throw ApiError.badRequest(`No ${referenceType} journal entry was found to reverse`);
+    throw ApiError.badRequest("No SALE journal entry was found to reverse");
   }
   const originalLines = await JournalLine.find({ entryId: original._id }).session(session);
   if (originalLines.length === 0) {
     throw ApiError.badRequest("Original journal has no lines to reverse");
   }
 
-  const ratio = returnedAmount / originalAmount;
-  return originalLines.map((line) => {
-    const debit = roundPaisa(line.debit * ratio);
-    const credit = roundPaisa(line.credit * ratio);
-    return {
-      accountName: line.accountName,
-      accountType: line.accountType,
-      debit: credit, // mirror: original debit becomes credit
-      credit: debit, // original credit becomes debit
-    };
-  });
+  const ratio = returnedAmount / sale.total;
+  const lines: JournalLineInput[] = [];
+  for (const line of originalLines) {
+    if (
+      line.accountName === JOURNAL_ACCOUNTS.COST_OF_GOODS_SOLD ||
+      line.accountName === JOURNAL_ACCOUNTS.INVENTORY
+    ) {
+      continue; // handled exactly below, not ratio-scaled
+    }
+    const scaledDebit = roundPaisa(line.debit * ratio);
+    const scaledCredit = roundPaisa(line.credit * ratio);
+    if (line.accountName === JOURNAL_ACCOUNTS.SALES_REVENUE) {
+      if (scaledCredit > 0) {
+        lines.push({
+          accountName: JOURNAL_ACCOUNTS.SALES_RETURNS,
+          accountType: "REVENUE",
+          debit: scaledCredit,
+          credit: 0,
+        });
+      }
+      continue;
+    }
+    // Tax Payable / Customer Receivable / cash assets mirror with swapped sides.
+    if (scaledDebit > 0 || scaledCredit > 0) {
+      lines.push({
+        accountName: line.accountName,
+        accountType: line.accountType as JournalLineInput["accountType"],
+        debit: scaledCredit,
+        credit: scaledDebit,
+      });
+    }
+  }
+  // Exact inventory restoration + COGS reversal from the cost snapshots.
+  if (returnedCost > 0) {
+    lines.push({
+      accountName: JOURNAL_ACCOUNTS.INVENTORY,
+      accountType: "ASSET",
+      debit: returnedCost,
+      credit: 0,
+    });
+    lines.push({
+      accountName: JOURNAL_ACCOUNTS.COST_OF_GOODS_SOLD,
+      accountType: "EXPENSE",
+      debit: 0,
+      credit: returnedCost,
+    });
+  }
+  return reconcileLines(lines);
+}
+
+export async function buildPurchaseReturnJournalLines(
+  businessId: string,
+  shopId: string,
+  purchase: PurchaseDocument,
+  returnedAmount: number,
+  session: ClientSession | null
+): Promise<JournalLineInput[]> {
+  if (returnedAmount <= 0) return [];
+  const original = await JournalEntry.findOne({
+    businessId: new Types.ObjectId(businessId),
+    shopId: new Types.ObjectId(shopId),
+    referenceType: "PURCHASE",
+    referenceId: purchase._id as Types.ObjectId,
+    isReversal: false,
+  }).session(session);
+  if (!original) {
+    throw ApiError.badRequest("No PURCHASE journal entry was found to reverse");
+  }
+  const originalLines = await JournalLine.find({ entryId: original._id }).session(session);
+  if (originalLines.length === 0) {
+    throw ApiError.badRequest("Original journal has no lines to reverse");
+  }
+
+  const ratio = returnedAmount / purchase.total;
+  const lines: JournalLineInput[] = [];
+  for (const line of originalLines) {
+    const scaledDebit = roundPaisa(line.debit * ratio);
+    const scaledCredit = roundPaisa(line.credit * ratio);
+    if (scaledDebit > 0 || scaledCredit > 0) {
+      lines.push({
+        accountName: line.accountName,
+        accountType: line.accountType as JournalLineInput["accountType"],
+        debit: scaledCredit,
+        credit: scaledDebit,
+      });
+    }
+  }
+  return reconcileLines(lines);
 }
 
 /**
@@ -163,7 +281,7 @@ export async function returnSale(
       }
 
       // Offline-sync idempotency: the same localId never applies a second
-      // return — a retried request resolves to the original's effects.
+      // return â€” a retried request resolves to the original's effects.
       if (input.localId) {
         const existing = await StockReturn.findOne({
           businessId: new Types.ObjectId(input.businessId),
@@ -179,8 +297,9 @@ export async function returnSale(
       let totalReturnedAmount = 0;
       let totalReturnedPaid = 0;
       let totalReturnedDue = 0;
+      let totalReturnedCost = 0;
 
-      // The immutable return record — also the refId of every reversal
+      // The immutable return record â€” also the refId of every reversal
       // StockMovement, the reversal journal entry and the audit row.
       const created = await StockReturn.create(
         [
@@ -284,6 +403,8 @@ export async function returnSale(
       const paidRatio = sale.total > 0 ? sale.paidAmount / sale.total : 0;
       totalReturnedPaid += roundPaisa(lineReturnedAmount * paidRatio);
       totalReturnedDue += lineReturnedAmount - roundPaisa(lineReturnedAmount * paidRatio);
+      // Phase 07: exact COGS/inventory value from the authoritative snapshot.
+      totalReturnedCost += qty * saleLine.costPrice;
     }
 
     // Persist the authoritative reversal totals on the return record.
@@ -331,15 +452,14 @@ export async function returnSale(
       );
     }
 
-    // Balanced journal reversal (SALE_RETURN).
+    // Balanced journal reversal (SALE_RETURN) — Phase 07 contra accounting.
     if (totalReturnedAmount > 0) {
-      const lines = await buildReturnJournalLines(
+      const lines = await buildSaleReturnJournalLines(
         input.businessId,
         input.shopId,
-        "SALE",
-        sale._id as Types.ObjectId,
+        sale,
         totalReturnedAmount,
-        sale.total,
+        totalReturnedCost,
         session
       );
       if (lines.length > 0) {
@@ -383,7 +503,7 @@ export async function returnSale(
     });
   } catch (err) {
     // A concurrent create with the same localId lost the race on the unique
-    // index — the original return's effects stand; this call adds nothing.
+    // index â€” the original return's effects stand; this call adds nothing.
     if (isDuplicateKeyError(err) && input.localId) {
       const existing = await StockReturn.findOne({
         businessId: new Types.ObjectId(input.businessId),
@@ -442,7 +562,7 @@ export async function returnPurchase(
     }
 
     // Offline-sync idempotency: the same localId never applies a second
-    // return — a retried request resolves to the original's effects.
+    // return â€” a retried request resolves to the original's effects.
     if (input.localId) {
       const existing = await StockReturn.findOne({
         businessId: new Types.ObjectId(input.businessId),
@@ -458,7 +578,7 @@ export async function returnPurchase(
     let totalReturnedPaid = 0;
     let totalReturnedDue = 0;
 
-    // The immutable return record — also the refId of every reversal
+    // The immutable return record â€” also the refId of every reversal
     // StockMovement, the reversal journal entry and the audit row.
     const created = await StockReturn.create(
       [
@@ -613,13 +733,11 @@ export async function returnPurchase(
 
     // Balanced journal reversal (PURCHASE_RETURN).
     if (totalReturnedAmount > 0) {
-      const lines = await buildReturnJournalLines(
+      const lines = await buildPurchaseReturnJournalLines(
         input.businessId,
         input.shopId,
-        "PURCHASE",
-        purchase._id as Types.ObjectId,
+        purchase,
         totalReturnedAmount,
-        purchase.total,
         session
       );
       if (lines.length > 0) {
@@ -663,7 +781,7 @@ export async function returnPurchase(
     });
   } catch (err) {
     // A concurrent create with the same localId lost the race on the unique
-    // index — the original return's effects stand; this call adds nothing.
+    // index â€” the original return's effects stand; this call adds nothing.
     if (isDuplicateKeyError(err) && input.localId) {
       const existing = await StockReturn.findOne({
         businessId: new Types.ObjectId(input.businessId),

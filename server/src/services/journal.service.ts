@@ -19,6 +19,8 @@ export interface JournalInput {
   description: string;
   referenceType: JournalReferenceType;
   referenceId?: string | null;
+  /** Offline-sync idempotency anchor (optional; unique per business+type). */
+  localId?: string | null;
   lines: JournalLineInput[];
 }
 
@@ -72,6 +74,7 @@ export async function writeJournal(
         description: input.description,
         referenceType: input.referenceType,
         referenceId: input.referenceId ? new Types.ObjectId(input.referenceId) : null,
+        localId: input.localId ?? null,
         isReversal: false,
         reversesEntryId: null,
       },

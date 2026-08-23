@@ -406,6 +406,25 @@ async function finalizeInSession(
       credit: sale.taxAmount,
     });
   }
+  // --- COGS leg (Phase 07) ---
+  // Debit Cost of Goods Sold / credit Inventory for the authoritative cost
+  // snapshot carried on the sale lines (Σ qty × costPrice, integer paisa).
+  // Voids mirror this automatically; returns reverse it exactly per line.
+  const cogs = sale.items.reduce((sum, item) => sum + item.qty * item.costPrice, 0);
+  if (cogs > 0) {
+    lines.push({
+      accountName: JOURNAL_ACCOUNTS.COST_OF_GOODS_SOLD,
+      accountType: JOURNAL_ACCOUNT_TYPES[JOURNAL_ACCOUNTS.COST_OF_GOODS_SOLD],
+      debit: cogs,
+      credit: 0,
+    });
+    lines.push({
+      accountName: JOURNAL_ACCOUNTS.INVENTORY,
+      accountType: JOURNAL_ACCOUNT_TYPES[JOURNAL_ACCOUNTS.INVENTORY],
+      debit: 0,
+      credit: cogs,
+    });
+  }
   await writeJournal(
     {
       businessId,
