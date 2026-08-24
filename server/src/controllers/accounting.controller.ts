@@ -31,6 +31,13 @@ export const listJournal = asyncHandler(async (req: Request, res: Response) => {
   return sendSuccess(res, data);
 });
 
+/** Phase 12 — canonical chart of accounts (config-served, read-only). */
+export const chart = asyncHandler(async (req: Request, res: Response) => {
+  const { userId, businessId } = scope(req);
+  const data = await accountingService.chartOfAccounts(userId, businessId);
+  return sendSuccess(res, data);
+});
+
 export const generalLedger = asyncHandler(async (req: Request, res: Response) => {
   const { userId, businessId, shopId } = scope(req);
   const data = await accountingService.generalLedger(userId, businessId, shopId, {

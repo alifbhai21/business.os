@@ -12,6 +12,8 @@ export interface SupplierDocument extends Document {
   openingBalance: number; // paisa (positive = the business owes the supplier)
   currentPayable: number; // paisa — opening balance + purchases − payments (maintained by Phase 05+)
   status: SupplierStatus;
+  /** Phase 10 offline-sync idempotency anchor (see Customer.localId). */
+  localId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +29,7 @@ const supplierSchema = new Schema<SupplierDocument>(
     openingBalance: { type: Number, default: 0 }, // paisa
     currentPayable: { type: Number, default: 0 }, // paisa
     status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "ACTIVE" },
+    localId: { type: String, default: null, trim: true, maxlength: 80 },
   },
   { timestamps: true }
 );
@@ -34,5 +37,10 @@ const supplierSchema = new Schema<SupplierDocument>(
 // Suppliers are always accessed within a business tenant.
 supplierSchema.index({ businessId: 1, name: 1 });
 supplierSchema.index({ businessId: 1, phone: 1 });
+// Phase 10 offline-sync idempotency: one supplier per business-scoped localId.
+supplierSchema.index(
+  { businessId: 1, localId: 1 },
+  { unique: true, partialFilterExpression: { localId: { $type: "string" } } }
+);
 
 export const Supplier = model<SupplierDocument>("Supplier", supplierSchema);

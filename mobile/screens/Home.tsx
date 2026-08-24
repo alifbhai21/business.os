@@ -10,9 +10,14 @@ import { BusinessSwitcherScreen } from "./BusinessSwitcher";
 import { ShopSwitcherScreen } from "./ShopSwitcher";
 import { BusinessSettingsScreen } from "./BusinessSettings";
 import { ShopManagementScreen } from "./ShopManagement";
+import { TeamScreen } from "./Team";
+import { SyncCenterScreen } from "./SyncCenter";
+import { BackupExportScreen } from "./BackupExport";
+import { NotificationsScreen } from "./Notifications";
 import { AccountingScreen } from "./Accounting";
 import { ReportsScreen } from "./Reports";
 import { GlobalSearchScreen } from "./GlobalSearch";
+import { SyncStatusBar } from "./SyncStatusBar";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
 
@@ -51,6 +56,10 @@ export function Home() {
   if (overlay === "shopSwitcher") return <ShopSwitcherScreen onDone={() => setOverlay(null)} />;
   if (overlay === "businessSettings") return <BusinessSettingsScreen onDone={() => setOverlay(null)} />;
   if (overlay === "shopManagement") return <ShopManagementScreen onDone={() => setOverlay(null)} />;
+  if (overlay === "team") return <TeamScreen onDone={() => setOverlay(null)} />;
+  if (overlay === "syncCenter") return <SyncCenterScreen onDone={() => setOverlay(null)} onNavigateBackup={() => setOverlay("backupExport")} />;
+  if (overlay === "backupExport") return <BackupExportScreen onDone={() => setOverlay(null)} />;
+  if (overlay === "notifications") return <NotificationsScreen onDone={() => setOverlay(null)} />;
   if (overlay === "accounting") return <AccountingScreen onDone={() => setOverlay(null)} />;
   if (overlay === "reports") return <ReportsScreen onDone={() => setOverlay(null)} />;
   if (overlay === "search") return <GlobalSearchScreen onDone={() => setOverlay(null)} />;
@@ -62,6 +71,7 @@ export function Home() {
 
   return (
     <View style={styles.container}>
+      <SyncStatusBar />
       <View style={styles.content}>
         {tab === "dashboard" && (
           <DashboardScreen

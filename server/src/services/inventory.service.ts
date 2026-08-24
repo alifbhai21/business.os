@@ -53,7 +53,9 @@ export async function applyStockChange(
   refId: Types.ObjectId,
   unitCost: number,
   allowNegative: boolean,
-  session: ClientSession | null
+  session: ClientSession | null,
+  /** Phase 12 — offline-sync idempotency anchor for queued adjustments. */
+  localId?: string | null
 ): Promise<void> {
   assertSafePaisa(qtyChange, "qtyChange");
   if (qtyChange === 0) throw ApiError.badRequest("qtyChange must be non-zero");
@@ -88,6 +90,7 @@ export async function applyStockChange(
         refType,
         refId,
         createdBy: new Types.ObjectId(userId),
+        localId: localId ?? null,
       },
     ],
     { session: session ?? undefined, ordered: true }
@@ -109,64 +112,107 @@ export interface AdjustStockInput {
 export async function adjustStock(
   userId: string,
   input: AdjustStockInput
-): Promise<{ id: string; productId: string; qtyChange: number; newStock: number }> {
+): Promise<{ id: string; productId: string; qtyChange: number; newStock: number; duplicate?: boolean }> {
   await assertCanAdjust(userId, input.businessId, input.shopId);
   assertSafePaisa(input.qtyChange, "qtyChange");
   if (input.qtyChange === 0) throw ApiError.badRequest("qtyChange must be non-zero");
   if (!input.reason.trim()) throw ApiError.badRequest("reason is required");
 
-  const result = await withTransaction(async (session) => {
-    const business = await requireBusiness(input.businessId, session);
-    const product = await Product.findOne({
-      _id: new Types.ObjectId(input.productId),
+  const refType = (input.kind === "damage" ? "DAMAGE" : "ADJUSTMENT") as "ADJUSTMENT" | "DAMAGE";
+
+  // Phase 12 exactly-once for queued offline adjustments: a retried op
+  // resolves to the ORIGINAL movement with zero additional stock effect.
+  const recoverDuplicate = async (): Promise<{
+    id: string;
+    productId: string;
+    qtyChange: number;
+    newStock: number;
+    duplicate: boolean;
+  } | null> => {
+    if (!input.localId) return null;
+    const existing = await StockMovement.findOne({
       businessId: new Types.ObjectId(input.businessId),
-    }).session(session);
-    if (!product) throw ApiError.notFound("Product not found");
-
-    const refId = new Types.ObjectId();
-    await applyStockChange(
-      userId,
-      input.businessId,
-      input.shopId,
-      input.productId,
-      input.qtyChange,
-      input.kind,
-      input.kind === "damage" ? "DAMAGE" : "ADJUSTMENT",
-      refId,
-      product.avgCost,
-      business.allowNegativeStock,
-      session
-    );
-
-    const fresh = await Product.findById(product._id).session(session);
-    await AuditLog.create(
-      [
-        {
-          userId: new Types.ObjectId(userId),
-          businessId: new Types.ObjectId(input.businessId),
-          action: input.kind === "damage" ? "STOCK_DAMAGED" : "STOCK_ADJUSTED",
-          ip: null,
-          details: JSON.stringify({
-            productId: input.productId,
-            shopId: input.shopId,
-            qtyChange: input.qtyChange,
-            newStock: fresh!.currentStock,
-            reason: input.reason,
-          }),
-        },
-      ],
-      { session: session ?? undefined, ordered: true }
-    );
-
+      refType,
+      localId: input.localId,
+    }).lean();
+    if (!existing) return null;
+    const fresh = await Product.findById(input.productId).select("currentStock").lean();
     return {
-      id: String(refId),
+      id: String(existing.refId),
       productId: input.productId,
-      qtyChange: input.qtyChange,
-      newStock: fresh!.currentStock,
+      qtyChange: existing.qtyChange,
+      newStock: fresh?.currentStock ?? existing.newStock,
+      duplicate: true,
     };
-  });
+  };
 
-  return result;
+  const preexisting = await recoverDuplicate();
+  if (preexisting) return preexisting;
+
+  try {
+    const result = await withTransaction(async (session) => {
+      const business = await requireBusiness(input.businessId, session);
+      const product = await Product.findOne({
+        _id: new Types.ObjectId(input.productId),
+        businessId: new Types.ObjectId(input.businessId),
+      }).session(session);
+      if (!product) throw ApiError.notFound("Product not found");
+
+      const refId = new Types.ObjectId();
+      await applyStockChange(
+        userId,
+        input.businessId,
+        input.shopId,
+        input.productId,
+        input.qtyChange,
+        input.kind,
+        refType,
+        refId,
+        product.avgCost,
+        business.allowNegativeStock,
+        session,
+        input.localId ?? null
+      );
+
+      const fresh = await Product.findById(product._id).session(session);
+      await AuditLog.create(
+        [
+          {
+            userId: new Types.ObjectId(userId),
+            businessId: new Types.ObjectId(input.businessId),
+            action: input.kind === "damage" ? "STOCK_DAMAGED" : "STOCK_ADJUSTED",
+            ip: null,
+            details: JSON.stringify({
+              productId: input.productId,
+              shopId: input.shopId,
+              qtyChange: input.qtyChange,
+              newStock: fresh!.currentStock,
+              reason: input.reason,
+            }),
+          },
+        ],
+        { session: session ?? undefined, ordered: true }
+      );
+
+      return {
+        id: String(refId),
+        productId: input.productId,
+        qtyChange: input.qtyChange,
+        newStock: fresh!.currentStock,
+        duplicate: false,
+      };
+    });
+
+    return result;
+  } catch (err) {
+    // Concurrent duplicate: the unique partial index aborted this transaction
+    // AFTER rollback — resolve to the winner's original movement.
+    if (input.localId && isDuplicateKeyError(err)) {
+      const dup = await recoverDuplicate();
+      if (dup) return dup;
+    }
+    throw err;
+  }
 }
 
 export interface OpeningStockInput {
@@ -181,59 +227,84 @@ export interface OpeningStockInput {
 export async function setOpeningStock(
   userId: string,
   input: OpeningStockInput
-): Promise<{ productId: string; quantity: number }> {
+): Promise<{ productId: string; quantity: number; duplicate?: boolean }> {
   await assertCanAdjust(userId, input.businessId, input.shopId);
   assertSafePaisa(input.quantity, "quantity");
   if (input.quantity < 0) throw ApiError.badRequest("quantity must be >= 0");
 
-  const result = await withTransaction(async (session) => {
-    const product = await Product.findOne({
-      _id: new Types.ObjectId(input.productId),
+  // Phase 12 exactly-once for queued offline openings (quantity > 0 creates
+  // the dedupable movement; a zero opening has no stock effect to duplicate).
+  const recoverDuplicate = async (): Promise<{ productId: string; quantity: number; duplicate: boolean } | null> => {
+    if (!input.localId || input.quantity === 0) return null;
+    const existing = await StockMovement.findOne({
       businessId: new Types.ObjectId(input.businessId),
-    }).session(session);
-    if (!product) throw ApiError.notFound("Product not found");
-    if (product.currentStock !== 0) {
-      throw ApiError.badRequest("Opening stock can only be set when current stock is 0");
-    }
+      refType: "OPENING",
+      localId: input.localId,
+    }).lean();
+    if (!existing) return null;
+    return { productId: input.productId, quantity: existing.qtyChange, duplicate: true };
+  };
 
-    const refId = new Types.ObjectId();
-    if (input.quantity > 0) {
-      await applyStockChange(
-        userId,
-        input.businessId,
-        input.shopId,
-        input.productId,
-        input.quantity,
-        "opening",
-        "OPENING",
-        refId,
-        product.avgCost,
-        true,
-        session
+  const preexisting = await recoverDuplicate();
+  if (preexisting) return preexisting;
+
+  try {
+    const result = await withTransaction(async (session) => {
+      const product = await Product.findOne({
+        _id: new Types.ObjectId(input.productId),
+        businessId: new Types.ObjectId(input.businessId),
+      }).session(session);
+      if (!product) throw ApiError.notFound("Product not found");
+      if (product.currentStock !== 0) {
+        throw ApiError.badRequest("Opening stock can only be set when current stock is 0");
+      }
+
+      const refId = new Types.ObjectId();
+      if (input.quantity > 0) {
+        await applyStockChange(
+          userId,
+          input.businessId,
+          input.shopId,
+          input.productId,
+          input.quantity,
+          "opening",
+          "OPENING",
+          refId,
+          product.avgCost,
+          true,
+          session,
+          input.localId ?? null
+        );
+      }
+
+      await AuditLog.create(
+        [
+          {
+            userId: new Types.ObjectId(userId),
+            businessId: new Types.ObjectId(input.businessId),
+            action: "STOCK_OPENING_SET",
+            ip: null,
+            details: JSON.stringify({
+              productId: input.productId,
+              shopId: input.shopId,
+              quantity: input.quantity,
+            }),
+          },
+        ],
+        { session: session ?? undefined, ordered: true }
       );
+
+      return { productId: input.productId, quantity: input.quantity, duplicate: false };
+    });
+
+    return result;
+  } catch (err) {
+    if (input.localId && isDuplicateKeyError(err)) {
+      const dup = await recoverDuplicate();
+      if (dup) return dup;
     }
-
-    await AuditLog.create(
-      [
-        {
-          userId: new Types.ObjectId(userId),
-          businessId: new Types.ObjectId(input.businessId),
-          action: "STOCK_OPENING_SET",
-          ip: null,
-          details: JSON.stringify({
-            productId: input.productId,
-            shopId: input.shopId,
-            quantity: input.quantity,
-          }),
-        },
-      ],
-      { session: session ?? undefined, ordered: true }
-    );
-
-    return { productId: input.productId, quantity: input.quantity };
-  });
-
-  return result;
+    throw err;
+  }
 }
 
 export interface ListStockQuery {

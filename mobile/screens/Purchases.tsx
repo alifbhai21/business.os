@@ -7,8 +7,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { Button, Chip, ErrorBanner, FormModal, Input } from "../src/components/ui";
+import { Button, Chip, ErrorBanner, FormModal, InfoBanner, Input } from "../src/components/ui";
 import { ApiError, authRequest } from "../src/api";
+import { authMutation } from "../src/offline/mutate";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
@@ -52,13 +53,14 @@ interface CartLine {
 
 export function PurchasesScreen() {
   const { t } = useI18n();
-  const { activeBusinessId, activeShopId } = useAuth();
+  const { activeBusinessId, activeShopId, user } = useAuth();
   const [items, setItems] = useState<Purchase[]>([]);
   const [products, setProducts] = useState<ProductLite[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierLite[]>([]);
   const [accounts, setAccounts] = useState<AccountLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -163,24 +165,24 @@ export function PurchasesScreen() {
     }
     setSaving(true);
     setError(null);
+    setInfo(null);
     try {
       // Server recomputes totals; localId makes an offline retry idempotent.
-      await authRequest("/api/v1/purchases", {
-        method: "POST",
-        body: {
-          businessId: bizId,
-          shopId,
-          supplierId,
-          items: cart.map((l) => ({
-            productId: l.productId,
-            qty: l.qty,
-            unitPrice: l.unitPrice,
-          })),
-          paidAmount: paid,
-          accountId: accountId || null,
-          localId: newLocalId("pur"),
-        },
+      // Network failures queue the exact payload for /sync/push.
+      const result = await authMutation(user?.id ?? "", "purchase", "/api/v1/purchases", {
+        businessId: bizId,
+        shopId,
+        supplierId,
+        items: cart.map((l) => ({
+          productId: l.productId,
+          qty: l.qty,
+          unitPrice: l.unitPrice,
+        })),
+        paidAmount: paid,
+        accountId: accountId || null,
+        localId: newLocalId("pur"),
       });
+      if (result.queued) setInfo(t("queuedOffline"));
       setModalOpen(false);
       setCart([]);
       setSupplierId("");
@@ -199,6 +201,7 @@ export function PurchasesScreen() {
       <View style={styles.toolbar}>
         <Button title={`+ ${t("newPurchase")}`} onPress={() => setModalOpen(true)} />
       </View>
+      <InfoBanner message={info} />
       <ErrorBanner message={error} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />

@@ -129,6 +129,16 @@ export function ErrorBanner({ message }: { message: string | null }) {
   );
 }
 
+/** Phase 10 — non-blocking success/offline-queued notice. */
+export function InfoBanner({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <View style={styles.infoBanner}>
+      <Text style={styles.infoText}>{message}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -223,6 +233,16 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.danger,
+    fontSize: 14,
+  },
+  infoBanner: {
+    backgroundColor: "#DCFCE7",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  infoText: {
+    color: colors.success,
     fontSize: 14,
   },
 });

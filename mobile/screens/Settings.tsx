@@ -11,6 +11,10 @@ export type SettingsRoute =
   | "shopSwitcher"
   | "businessSettings"
   | "shopManagement"
+  | "team"
+  | "syncCenter"
+  | "backupExport"
+  | "notifications"
   | "accounting"
   | "reports"
   | "search";
@@ -55,6 +59,10 @@ export function SettingsScreen({ onNavigate }: { onNavigate?: (route: SettingsRo
               <Button title={t("shopSwitcher")} onPress={() => onNavigate("shopSwitcher")} variant="secondary" />
               <Button title={t("businessSettings")} onPress={() => onNavigate("businessSettings")} variant="secondary" />
               <Button title={t("shopManagement")} onPress={() => onNavigate("shopManagement")} variant="secondary" />
+              <Button title={t("team")} onPress={() => onNavigate("team")} variant="secondary" />
+              <Button title={t("syncCenter")} onPress={() => onNavigate("syncCenter")} variant="secondary" />
+              <Button title={t("notifications")} onPress={() => onNavigate("notifications")} variant="secondary" />
+              <Button title={t("backupExport")} onPress={() => onNavigate("backupExport")} variant="secondary" />
               <Button title={t("accounting")} onPress={() => onNavigate("accounting")} variant="secondary" />
               <Button title={t("reports")} onPress={() => onNavigate("reports")} variant="secondary" />
             </View>

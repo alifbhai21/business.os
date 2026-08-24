@@ -72,10 +72,11 @@ async function scopedFilter(
   }
   if (typeof query.to === "string" && query.to) {
     const d = new Date(query.to);
-    if (Number.isNaN(d.getTime())) throw ApiError.badRequest("Invalid to date");
-    // A bare YYYY-MM-DD "to" means the whole of that day (same rule as the
-    // accounting read layer).
-    if (DAY_RE.test(query.to)) d.setHours(23, 59, 59, 999);
+    if (Number.isNaN(d.getTime())) throw ApiError.badRequest("Invalid from date");
+    // A bare YYYY-MM-DD "to" means the whole of that UTC day (reports bucket
+    // by UTC days, so the bound must be UTC-midnight-to-UTC-midnight — a
+    // local setHours() here truncates the evening in UTC+ timezones).
+    if (DAY_RE.test(query.to)) d.setTime(d.getTime() + 86_400_000 - 1);
     range.$lte = d;
   }
   if (fromDate && range.$lte instanceof Date && fromDate > range.$lte) {

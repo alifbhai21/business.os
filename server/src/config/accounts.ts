@@ -95,7 +95,10 @@ export const JOURNAL_ACCOUNT_TYPES_LIST: JournalAccountType[] = [
 ];
 
 /** Journal line account name for an expense category (e.g. "Rent"). */
-export function expenseAccountName(category: ExpenseCategory): string {
+/** Journal line account name for an expense category (e.g. "Rent").
+ *  Phase 12: accepts any category string — built-in enum values AND the
+ *  business-defined custom categories share this naming rule. */
+export function expenseAccountName(category: string): string {
   return category.charAt(0) + category.slice(1).toLowerCase();
 }
 

@@ -34,10 +34,10 @@
 - [x] Phase 06 — Inventory, Returns & Transfers — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 444/444 TESTS)
 - [x] Phase 07 — Double-Entry Accounting Engine — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 465/465 TESTS)
 - [x] Phase 08 — Dashboard & Reports — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 510/510 TESTS + 18/18 REAL-ATLAS)
-- [ ] Phase 09 — Employees, Roles & Devices
-- [ ] Phase 10 — Offline SQLite & Sync Engine
-- [ ] Phase 11 — Backup & Restore
-- [ ] Phase 12 — Enhancements
+- [x] Phase 09 — Employees, Roles & Devices — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 540/540 TESTS + 24/24 REAL-ATLAS)
+- [x] Phase 10 — Offline SQLite & Sync Engine — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 553/553 TESTS + 29/29 REAL-ATLAS)
+- [x] Phase 11 — Backup & Restore — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-23; 577/577 TESTS + 34/34 REAL-ATLAS)
+- [x] Phase 12 — Enhancements — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-24; 600/600 TESTS + 39/39 REAL-ATLAS; FCM push BLOCKED on Firebase credentials, jobs module deferred)
 - [ ] Phase 13 — Testing, CI/CD & Deployment
 - [ ] Phase 14 — Production Hardening & Monitoring
 - [ ] Phase 15 — Future
@@ -755,170 +755,242 @@
 
 ## Phase 09 — Employees, Roles & Devices
 
+> **Phase 09 VERIFIED (2026-08-23):** Recovered from an interrupted Codex
+> session's uncommitted work-in-progress; baseline re-proven first (510/510
+> with the orphan tests quarantined). Fixed two real application bugs in the
+> recovered code — Employee unique partial index used `$ne` which MongoDB
+> rejects in `partialFilterExpression` (index never built; duplicates
+> accepted) and ROLE_ASSIGNED audit logged previousRole after mutation —
+> plus added BUSINESS_CREATED/BUSINESS_UPDATED audit coverage. Recovered
+> test helpers corrected against the verified register contract
+> (`data.user.phone`); device revoke test strengthened to prove real refresh-
+> token termination. See docs/phases/phase-09.md for the full report.
+
 ### Database
 
-- [ ] Create Employee model
-- [ ] Create Role/Permission model
-- [ ] Update Device model with shop/branch
-- [ ] Add audit log coverage fields
+- [x] Create Employee model
+- [x] Create Role/Permission model (server-authoritative matrix in config/roles.ts)
+- [x] Update Device model with shop/branch
+- [x] Add audit log coverage fields
 
 ### Backend
 
-- [ ] Employee service (CRUD)
-- [ ] Role/permission service
-- [ ] Device service (register, revoke, lastSync)
-- [ ] Audit service (log all sensitive actions)
-- [ ] RBAC enforcement on all routes
-- [ ] Shop-level permission enforcement
+- [x] Employee service (CRUD)
+- [x] Role/permission service
+- [x] Device service (register, revoke, lastSync)
+- [x] Audit service (log all sensitive actions)
+- [x] RBAC enforcement on all routes
+- [x] Shop-level permission enforcement
 
 ### API
 
-- [ ] `GET/POST/PUT/DELETE /api/v1/employees`
-- [ ] `GET/POST /api/v1/roles`
-- [ ] `GET/POST /api/v1/devices`
-- [ ] `PUT /api/v1/devices/:id/revoke`
-- [ ] `GET /api/v1/audit`
+- [x] `GET/POST/PUT/DELETE /api/v1/employees`
+- [x] `GET/POST /api/v1/roles`
+- [x] `GET/POST /api/v1/devices`
+- [x] `PUT /api/v1/devices/:id/revoke`
+- [x] `GET /api/v1/audit`
 
 ### Mobile
 
-- [ ] Employee list screen
-- [ ] Add/edit employee
-- [ ] Role assignment
-- [ ] Device list screen
-- [ ] Revoke device
-- [ ] Audit log screen
-- [ ] Sync status per device
+- [x] Employee list screen
+- [x] Add/edit employee
+- [x] Role assignment
+- [x] Device list screen
+- [x] Revoke device
+- [x] Audit log screen
+- [x] Sync status per device
 
 ### Testing
 
-- [ ] Employee CRUD tests
-- [ ] Role permission tests
-- [ ] Device revoke test
-- [ ] Audit log coverage tests
-- [ ] RBAC enforcement tests
+- [x] Employee CRUD tests
+- [x] Role permission tests
+- [x] Device revoke test
+- [x] Audit log coverage tests
+- [x] RBAC enforcement tests
 
 ### Acceptance Criteria
 
-- [ ] Employees can be added with roles
-- [ ] Permissions enforced
-- [ ] Devices registered and revocable
-- [ ] Audit log covers all sensitive actions
-- [ ] Tests passing
+- [x] Employees can be added with roles
+- [x] Permissions enforced
+- [x] Devices registered and revocable
+- [x] Audit log covers all sensitive actions
+- [x] Tests passing (540/540 + 24/24 real-Atlas)
 
 ---
 
 ## Phase 10 — Offline SQLite & Sync Engine
 
+> **Phase 10 VERIFIED (2026-08-23):** Built around the verified Phase 05–09
+> foundations. `POST /sync/push` dispatches queued ops through the exact
+> online Zod schemas and services (ordered, per-op SYNCED/CONFLICT/FAILED,
+> device identity from JWT only); `GET /sync/pull` serves master-data deltas
+> since a cursor; SyncEvent rows log every push/pull for the sync KPI.
+> Master-data creates gained localId exactly-once indexes matching Phase 05.
+> Mobile: expo-sqlite with migrations, durable owner-scoped sync_queue +
+> metadata + master-data caches, single-flight engine (backoff, crash-safe
+> SYNCING reset, connectivity/foreground auto-sync), authMutation fallback
+> wired into Sales/Purchases/Payments/Expenses/Parties/Products, cache
+> read-only fallback, SyncStatusBar + Sync center UI, bn/en parity. See
+> docs/phases/phase-10.md.
+
 ### Database
 
-- [ ] Set up expo-sqlite
-- [ ] Create local schema (all core tables)
-- [ ] Add local migrations
-- [ ] Create sync_queue table
-- [ ] Create sync_metadata table
+- [x] Set up expo-sqlite
+- [x] Create local schema (all core tables)
+- [x] Add local migrations
+- [x] Create sync_queue table
+- [x] Create sync_metadata table
 
 ### Offline
 
-- [ ] Offline products (local copy)
-- [ ] Offline customers
-- [ ] Offline suppliers
-- [ ] Offline sales (create offline)
-- [ ] Offline purchases (create offline)
-- [ ] Offline payments
-- [ ] Offline expenses
-- [ ] Offline inventory movements
-- [ ] local_id generation (client UUID)
-- [ ] Sync status tracking (PENDING/SYNCING/SYNCED/FAILED/CONFLICT)
+- [x] Offline products (local copy)
+- [x] Offline customers
+- [x] Offline suppliers
+- [x] Offline sales (create offline)
+- [x] Offline purchases (create offline)
+- [x] Offline payments
+- [x] Offline expenses
+- [ ] Offline inventory movements (Phase 11 follow-up; engines already replayable)
+- [x] local_id generation (client UUID)
+- [x] Sync status tracking (PENDING/SYNCING/SYNCED/FAILED/CONFLICT)
 
 ### Backend Sync
 
-- [ ] `POST /api/v1/sync/push` (idempotent by local_id + device_id)
-- [ ] `POST /api/v1/sync/pull` (delta since cursor)
-- [ ] Server-side duplicate prevention
-- [ ] Conflict detection and logging
+- [x] `POST /api/v1/sync/push` (idempotent by local_id + device_id from JWT)
+- [x] `GET /api/v1/sync/pull` (delta since cursor)
+- [x] Server-side duplicate prevention
+- [x] Conflict detection and logging
+- [x] Sync events table/logging
 
 ### Mobile Sync
 
-- [ ] Sync queue manager
-- [ ] Retry with backoff
-- [ ] Connectivity change listener
-- [ ] Sync on app foreground
-- [ ] Sync status UI
-- [ ] Conflict resolution UI (notify user)
+- [x] Sync queue manager
+- [x] Retry with backoff
+- [x] Connectivity change listener
+- [x] Sync on app foreground
+- [x] Manual sync now button
+- [x] Sync status UI (counts, last sync time)
+- [x] Conflict resolution UI (notify user)
 
 ### Testing
 
-- [ ] Offline create sale test
-- [ ] Offline create purchase test
-- [ ] Sync push idempotency test
-- [ ] Sync pull delta test
-- [ ] Retry test
-- [ ] Conflict detection test
-- [ ] Duplicate prevention test
-- [ ] Sync status transition test
+- [x] Offline create sale test
+- [x] Offline create purchase test (dispatcher shared; batch isolation proven on Atlas)
+- [x] Offline create customer/payment/expense tests
+- [x] Sync push idempotency test
+- [x] Sync pull delta test
+- [x] Retry test (backoff + transient parking)
+- [x] Conflict detection test
+- [x] Duplicate prevention test
+- [x] Sync status transition test
 
 ### Acceptance Criteria
 
-- [ ] App fully functional offline
-- [ ] All offline ops queued and synced
-- [ ] No duplicate records after sync
-- [ ] Retry works with backoff
-- [ ] Conflicts detected and logged
-- [ ] Sync success rate ≥ 99.5% in tests
-- [ ] Tests passing
+- [x] App fully functional offline
+- [x] All offline ops queued and synced automatically
+- [x] No duplicate records after sync
+- [x] Retry works with exponential backoff
+- [x] Conflicts detected and logged
+- [x] Sync success rate measurable via SyncEvent KPI (100% in tests)
+- [x] Tests passing (553/553 + 29/29 real-Atlas)
 
 ---
 
 ## Phase 11 — Backup & Restore
 
+> **Phase 11 VERIFIED (2026-08-23):** Recovery audit found no pre-existing
+> Phase 11 code; baseline re-proven first (553/553 + 29/29 real-Atlas).
+> Atlas is the backup source of record; the app now surfaces it: 
+> `GET /backup/status` (persistence health, any active member),
+> `GET /sync/restore` (full dataset for a NEW device — read-only, one
+> SyncEvent RESTORE row, deviceId from verified JWT only, shop-pin
+> honoured), `GET /export/data` (JSON archive incl. journals + audit trail)
+> and `GET /export/csv?type=…` (RFC-4180 per-entity CSV) gated by a new
+> `data:export` permission (Owner/Admin/Manager/Accountant) at route AND
+> service level with DATA_EXPORTED audit rows. Mobile: SQLite migration v2
+> (`local_accounts`), sync-engine `restoreAll()` with fresh-device
+> auto-restore + manual restore, Backup & Export screen (status card,
+> restore summary, JSON/CSV share exports), cloud-backup indicator in the
+> Sync center, bn/en parity 404/404 (fixed a pre-existing mis-indented en
+> key). See docs/phases/phase-11.md.
+
 ### Backend
 
-- [ ] Backup strategy (MongoDB Atlas as backup source)
-- [ ] Restore API
-- [ ] Data export endpoint
+- [x] Backup strategy (MongoDB Atlas as backup source — documented + status endpoint)
+- [x] Restore API (`GET /api/v1/sync/restore`)
+- [x] Data export endpoint JSON (`GET /api/v1/export/data`)
+- [x] Data export endpoint CSV (`GET /api/v1/export/csv?type=`)
 
 ### Mobile
 
-- [ ] Restore on login to new device
-- [ ] Backup status indicator
-- [ ] Data export screen
+- [x] Restore on login to new device (auto on fresh device + manual button)
+- [x] Backup status indicator (Sync center row + dedicated screen)
+- [x] Data export screen (Settings → Backup & Export)
 
 ### Testing
 
-- [ ] Backup test
-- [ ] Restore test
-- [ ] Export test
+- [x] Backup test (status counts vs real documents, unit + real-Atlas)
+- [x] Restore test (new device gets full data; unit + real-Atlas new-device login scenario)
+- [x] Export test (JSON balance/reconciliation invariants + CSV escaping/header/row-count/RBAC/isolation)
 
 ### Acceptance Criteria
 
-- [ ] New device restore works
-- [ ] Data export works
-- [ ] Tests passing
+- [x] New device restore works (HTTP contract + real Atlas; mobile runtime pending)
+- [x] Data export works
+- [x] Tests passing (577/577 + 34/34 real-Atlas)
 
 ---
 
 ## Phase 12 — Enhancements
 
+> **Phase 12 VERIFIED (2026-08-24):** Recovery audit preserved existing
+> barcode lookup (Phase 04), invoice serializer (Phase 05) and CSV export
+> (Phase 11). Built additively: chart-of-accounts API + UI, in-app
+> notifications with lazy idempotent materialization (dedupKey unique index,
+> zero writes inside financial transactions) and per-user preferences,
+> product variants with server-resolved sale snapshots and variant-barcode
+> lookup, custom expense categories validated against business state,
+> offline inventory adjust/opening (exactly-once via movement localId +
+> sync dispatcher types), printable escaped-HTML invoices, Excel (.xlsx)
+> export. Fixed a REAL latent timezone bug: bare YYYY-MM-DD report/
+> accounting bounds used local midnight, excluding same-day sales after
+> ~18:00 UTC in UTC+6 — now whole-UTC-day bounds. FCM push delivery BLOCKED
+> (no Firebase credentials; Device.fcmToken infrastructure shipped).
+> Service jobs module deferred (P2). See docs/phases/phase-12.md.
+
 ### Mobile
 
-- [ ] Barcode scanning (expo-camera + ML Kit)
-- [ ] FCM push notifications
-- [ ] In-app notifications (low stock, due, sync failure)
-- [ ] CSV/Excel export
-- [ ] PDF/print invoices
-- [ ] Product variants (S/M/L, sizes)
-- [ ] Chart of accounts UI
-- [ ] Custom expense categories
+- [x] Barcode scanning (expo-camera CameraView + manual fallback)
+- [x] Scan → Find Product → Add to Cart flow
+- [ ] FCM push notifications — BLOCKED (external dependency)
+- [x] In-app notifications (low stock, due, supplier payable, sync failure)
+- [x] CSV/Excel export (server endpoints; CSV via Phase 11 screen, Excel added)
+- [x] PDF/print invoices (invoice share + print view per sale row)
+- [x] Product variants (S/M/L/XL catalog + sale snapshot pricing)
+- [x] Chart of accounts UI (Accounting hub section)
+- [x] Custom expense categories (Business Settings editor + Expenses chips)
+
+### Backend
+
+- [x] Notification service (+ per-user preferences; FCM delivery BLOCKED — fcmToken field shipped)
+- [x] Export service CSV (existing) / Excel (new, exceljs)
+- [x] Product variant model + API
+- [x] Chart of accounts service + API
 
 ### Testing
 
-- [ ] Barcode scanner tests
-- [ ] Notification tests
-- [ ] Export tests
+- [x] Barcode scanner / notification / export / product-variant tests (23 new backend tests)
+- [x] Offline inventory exactly-once tests (retry + concurrency + conflict isolation)
+- [x] Real-Atlas verification (5 new tests; 39/39 total)
 
 ### Acceptance Criteria
-- [ ] All enhancements verified
-- [ ] Tests passing
+
+- [x] Barcode scanning works
+- [ ] Push notifications configured — BLOCKED on Firebase credentials (in-app notification system complete)
+- [x] CSV/Excel export works
+- [x] Product variants supported
+- [x] Chart of accounts UI works
+- [x] Tests passing (600/600 backend + 39/39 real-Atlas)
 
 ---
 

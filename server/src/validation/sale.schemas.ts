@@ -24,6 +24,8 @@ const saleItemSchema = z
     /** Optional override; defaults to the product's selling price server-side. */
     unitPrice: nonNegativePaisa.optional(),
     discountAmount: nonNegativePaisa.optional(),
+    /** Phase 12 — variant resolved against Product.variants server-side. */
+    variantName: z.string().trim().max(40).optional(),
   })
   .strict();
 

@@ -41,6 +41,12 @@ export interface BusinessDocument extends BusinessSettings, Document {
   phone: string | null;
   email: string | null;
   logo: string | null;
+  /**
+   * Phase 12 — business-defined expense categories (uppercased). Extend the
+   * built-in EXPENSE_CATEGORIES at runtime without code changes; each maps to
+   * its own journal expense account via the same naming rule.
+   */
+  customExpenseCategories: string[];
   status: BusinessStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -57,8 +63,9 @@ const businessSchema = new Schema<BusinessDocument>(
     address: { type: String, default: null },
     phone: { type: String, default: null },
     email: { type: String, default: null },
-    logo: { type: String, default: null },
-    status: { type: String, enum: ["ACTIVE", "SUSPENDED"], default: "ACTIVE" },
+  logo: { type: String, default: null },
+  customExpenseCategories: { type: [String], default: [] },
+  status: { type: String, enum: ["ACTIVE", "SUSPENDED"], default: "ACTIVE" },
   },
   { timestamps: true }
 );

@@ -43,6 +43,8 @@ export interface SaleItemInput {
   qty: number;
   unitPrice?: number;
   discountAmount?: number;
+  /** Phase 12 — optional variant; resolved against Product.variants server-side. */
+  variantName?: string | null;
 }
 
 export interface SalePaymentInput {
@@ -80,6 +82,7 @@ function itemToPublic(item: SaleItem) {
   return {
     productId: String(item.productId),
     productName: item.productName,
+    variantName: item.variantName ?? null,
     qty: item.qty,
     returnedQty: item.returnedQty ?? 0,
     unitPrice: item.unitPrice,
@@ -186,8 +189,22 @@ async function buildLines(
     const qty = assertSafePaisa(input.qty, "qty");
     if (qty <= 0) throw ApiError.badRequest("qty must be > 0");
 
+    // Phase 12 — resolve the variant against the product's catalog. The name
+    // must exist (a client-invented variant is a 400, never a silent label),
+    // and its price adjustment feeds the DEFAULT unit price only; an explicit
+    // unitPrice still wins and totals stay server-computed either way.
+    let variant: { name: string; priceAdjustmentPaisa: number } | null = null;
+    if (input.variantName) {
+      const found = (product.variants ?? []).find(
+        (v) => v.name.toLowerCase() === input.variantName!.trim().toLowerCase()
+      );
+      if (!found) throw ApiError.badRequest(`Unknown variant "${input.variantName}" for ${product.name}`);
+      variant = { name: found.name, priceAdjustmentPaisa: found.priceAdjustmentPaisa ?? 0 };
+    }
+
+    const baseUnitPrice = product.sellingPrice + (variant?.priceAdjustmentPaisa ?? 0);
     const unitPrice = assertSafePaisa(
-      input.unitPrice ?? product.sellingPrice,
+      input.unitPrice ?? baseUnitPrice,
       "unitPrice"
     );
     if (unitPrice < 0) throw ApiError.badRequest("unitPrice must be >= 0");
@@ -207,6 +224,7 @@ async function buildLines(
     built.push({
       productId: product._id as Types.ObjectId,
       productName: product.name,
+      variantName: variant?.name ?? null,
       qty,
       unitPrice,
       costPrice: assertSafePaisa(costPrice, "costPrice"),

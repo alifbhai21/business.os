@@ -17,6 +17,9 @@ export const envSchema = z.object({
   AUTH_MAX_LOGIN_ATTEMPTS: z.coerce.number().default(5),
   AUTH_LOCKOUT_MINUTES: z.coerce.number().default(15),
   CORS_ORIGIN: z.string().default("*"),
+  /** Global per-minute request ceiling (100 in production). The real-Atlas
+   *  harness raises it so a long integration run is not itself throttled. */
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
 });
 
 export type Env = z.infer<typeof envSchema>;

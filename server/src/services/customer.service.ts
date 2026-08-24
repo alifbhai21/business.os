@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { Customer, CustomerDocument, CustomerStatus } from "../models/Customer";
 import { ApiError } from "../utils/ApiError";
-import { escapeRegExp, membershipFor } from "./membership";
+import { escapeRegExp, isDuplicateKeyError, membershipFor } from "./membership";
 import { buildPagination, parsePagination } from "../utils/pagination";
 
 export interface CreateCustomerInput {
@@ -13,6 +13,8 @@ export interface CreateCustomerInput {
   customerCode?: string | null;
   openingBalance?: number;
   creditLimit?: number;
+  /** Phase 10 — offline-sync idempotency anchor. */
+  localId?: string | null;
 }
 
 export interface UpdateCustomerInput {
@@ -57,20 +59,44 @@ function roundPaisa(value: number | undefined): number | undefined {
 export async function createCustomer(userId: string, input: CreateCustomerInput) {
   const membership = await membershipFor(userId, input.businessId);
   if (!membership) throw ApiError.notFound("Business not found");
+
+  // Phase 10 offline-sync idempotency: the same localId never duplicates a row.
+  if (input.localId) {
+    const existing = await Customer.findOne({
+      businessId: new Types.ObjectId(input.businessId),
+      localId: input.localId,
+    });
+    if (existing) return { ...toPublic(existing), duplicate: true };
+  }
+
   const openingBalance = roundPaisa(input.openingBalance) ?? 0;
-  const customer = await Customer.create({
-    businessId: new Types.ObjectId(input.businessId),
-    name: input.name,
-    phone: input.phone ?? null,
-    email: input.email ?? null,
-    address: input.address ?? null,
-    customerCode: input.customerCode ?? null,
-    openingBalance,
-    creditLimit: roundPaisa(input.creditLimit) ?? 0,
-    // Seed due from the migrated opening balance (Phase 05+ updates it on sales/payments).
-    currentDue: openingBalance,
-  });
-  return toPublic(customer);
+  let customer: CustomerDocument;
+  try {
+    customer = await Customer.create({
+      businessId: new Types.ObjectId(input.businessId),
+      name: input.name,
+      phone: input.phone ?? null,
+      email: input.email ?? null,
+      address: input.address ?? null,
+      customerCode: input.customerCode ?? null,
+      openingBalance,
+      creditLimit: roundPaisa(input.creditLimit) ?? 0,
+      // Seed due from the migrated opening balance (Phase 05+ updates it on sales/payments).
+      currentDue: openingBalance,
+      localId: input.localId ?? null,
+    });
+  } catch (err) {
+    // Concurrent queued retry lost the race on the unique index.
+    if (isDuplicateKeyError(err) && input.localId) {
+      const existing = await Customer.findOne({
+        businessId: new Types.ObjectId(input.businessId),
+        localId: input.localId,
+      });
+      if (existing) return { ...toPublic(existing), duplicate: true };
+    }
+    throw err;
+  }
+  return { ...toPublic(customer), duplicate: false };
 }
 
 export async function listCustomers(userId: string, businessId: string, query: ListCustomersQuery) {

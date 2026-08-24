@@ -1,7 +1,12 @@
 import { z } from "zod";
-import { EXPENSE_CATEGORIES } from "../config/accounts";
 
-const expenseCategoryEnum = z.enum([...EXPENSE_CATEGORIES] as [string, ...string[]]);
+/**
+ * Phase 12 — the category is validated against the built-in enum UNION the
+ * business's custom categories inside the service (it needs live Business
+ * state), so the schema only enforces shape here. Invalid categories still
+ * answer 400 — from the service.
+ */
+const expenseCategoryEnum = z.string().trim().min(1, "category is required").max(30);
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid MongoDB ObjectId");
 

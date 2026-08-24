@@ -28,6 +28,8 @@ export interface BusinessPublic {
   phone: string | null;
   email: string | null;
   logo: string | null;
+  /** Phase 12 — business-defined expense categories (uppercased). */
+  customExpenseCategories?: string[];
   status: string;
   createdAt: string;
   updatedAt: string;

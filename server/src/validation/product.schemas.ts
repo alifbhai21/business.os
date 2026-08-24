@@ -7,6 +7,22 @@ const optionalId = z.string().max(64).optional().nullable();
 // Money amounts are integer paisa (৳ × 100). Floats are rounded by the service.
 const paisa = z.number().min(0).max(1_000_000_000_000);
 
+/**
+ * Phase 12 — product variant (catalog metadata; stock stays product-level).
+ * Names are unique (case-insensitive) within the product — enforced by the
+ * service so it can return a precise 409 with context.
+ */
+export const productVariantSchema = z
+  .object({
+    name: z.string().trim().min(1, "Variant name is required").max(40),
+    sku: z.string().trim().max(60).optional().nullable(),
+    barcode: z.string().trim().max(80).optional().nullable(),
+    priceAdjustmentPaisa: paisa.default(0),
+  })
+  .strict();
+
+export const productVariantsSchema = z.array(productVariantSchema).max(20, "at most 20 variants");
+
 export const productCreateSchema = z.object({
   businessId: z.string().min(1, "businessId is required"),
   name: z.string().trim().min(1, "Product name is required").max(120),
@@ -26,6 +42,9 @@ export const productCreateSchema = z.object({
   preferredSupplierId: optionalId,
   imageUrl: z.string().max(500).optional().nullable(),
   description: optionalLongText,
+  variants: productVariantsSchema.optional(),
+  // Phase 10 — offline-sync idempotency anchor (never required online).
+  localId: z.string().trim().max(80).optional().nullable(),
 });
 
 export const productUpdateSchema = z.object({
@@ -47,6 +66,7 @@ export const productUpdateSchema = z.object({
   preferredSupplierId: optionalId,
   imageUrl: z.string().max(500).optional().nullable(),
   description: optionalLongText,
+  variants: productVariantsSchema.optional(),
 });
 
 export const productStatusSchema = z.object({

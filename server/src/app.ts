@@ -27,6 +27,14 @@ import accountingRoutes from "./routes/accounting.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import reportRoutes from "./routes/report.routes";
 import searchRoutes from "./routes/search.routes";
+import employeeRoutes from "./routes/employee.routes";
+import roleRoutes from "./routes/role.routes";
+import deviceRoutes from "./routes/device.routes";
+import auditRoutes from "./routes/audit.routes";
+import syncRoutes from "./routes/sync.routes";
+import backupRoutes from "./routes/backup.routes";
+import exportRoutes from "./routes/export.routes";
+import notificationRoutes from "./routes/notification.routes";
 
 const env = loadEnv();
 
@@ -47,7 +55,7 @@ app.use(mongoSanitize());
 
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute globally
+  max: env.RATE_LIMIT_MAX, // production default: 100 requests per minute
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.path === "/health" || req.path === "/ready",
@@ -91,6 +99,18 @@ app.use("/api/v1/accounting", accountingRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/search", searchRoutes);
+// Phase 09 — employees, roles, devices & audit trail.
+app.use("/api/v1/employees", employeeRoutes);
+app.use("/api/v1/roles", roleRoutes);
+app.use("/api/v1/devices", deviceRoutes);
+app.use("/api/v1/audit", auditRoutes);
+// Phase 10 — offline sync (push queued ops / pull master-data deltas).
+app.use("/api/v1/sync", syncRoutes);
+// Phase 11 — cloud backup visibility + data export.
+app.use("/api/v1/backup", backupRoutes);
+app.use("/api/v1/export", exportRoutes);
+// Phase 12 — in-app notifications (low stock / dues / sync failures).
+app.use("/api/v1/notifications", notificationRoutes);
 
 // --- 404 ---
 app.use((_req: Request, _res: Response, next: NextFunction) => {

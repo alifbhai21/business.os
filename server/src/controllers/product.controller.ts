@@ -7,7 +7,8 @@ import { ApiError } from "../utils/ApiError";
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
   const data = await productService.createProduct(req.user.id, req.body);
-  return sendSuccess(res, data, 201);
+  // Phase 10 — retried offline creates return the ORIGINAL row (duplicate).
+  return sendSuccess(res, data, data.duplicate ? 200 : 201);
 });
 
 export const listProducts = asyncHandler(async (req: Request, res: Response) => {

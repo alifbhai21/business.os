@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { I18nProvider, useI18n } from "./src/i18n";
 import { AuthProvider, useAuth } from "./src/auth";
+import { SyncProvider } from "./src/offline/SyncProvider";
 import { WelcomeScreen } from "./screens/Welcome";
 import { LoginScreen } from "./screens/Login";
 import { RegisterScreen } from "./screens/Register";
@@ -110,8 +111,10 @@ export default function App() {
   return (
     <I18nProvider>
       <AuthProvider>
-        <Root />
-        <StatusBar style="auto" />
+        <SyncProvider>
+          <Root />
+          <StatusBar style="auto" />
+        </SyncProvider>
       </AuthProvider>
     </I18nProvider>
   );

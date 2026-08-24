@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { Button, Chip, ErrorBanner } from "../src/components/ui";
+import { Button, Card, Chip, ErrorBanner } from "../src/components/ui";
 import { ApiError, authRequest } from "../src/api";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
@@ -21,7 +22,7 @@ import { formatTaka } from "../src/money";
  * values locally — the ledger is the single source of truth.
  */
 
-type Section = "pl" | "bs" | "cf" | "tb" | "ledger";
+type Section = "chart" | "pl" | "bs" | "cf" | "tb" | "ledger";
 
 interface AccountLine {
   accountName: string;
@@ -463,6 +464,80 @@ export function LedgerSection() {
   );
 }
 
+// ── Chart of Accounts (Phase 12) ────────────────────────────────────────────
+
+interface ChartAccount {
+  name: string;
+  accountType: string;
+  normalBalance: string;
+}
+
+export function ChartSection() {
+  const { t } = useI18n();
+  const { activeBusinessId } = useAuth();
+  const bizId = activeBusinessId ?? "";
+  const [groups, setGroups] = useState<Array<{ type: string; accounts: ChartAccount[] }>>([]);
+  const [expenseCats, setExpenseCats] = useState<Array<{ category: string; accountName: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!bizId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await authRequest<{
+          data: {
+            grouped: Record<string, ChartAccount[]>;
+            expenseCategories: Array<{ category: string; accountName: string }>;
+          };
+        }>(`/api/v1/accounting/chart?businessId=${encodeURIComponent(bizId)}`);
+        const order = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
+        setGroups(
+          order
+            .map((type) => ({ type, accounts: res.data.grouped[type] ?? [] }))
+            .filter((g) => g.accounts.length > 0)
+        );
+        setExpenseCats(res.data.expenseCategories);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t("genericError"));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [bizId, t]);
+
+  if (loading) return <ActivityIndicator style={{ marginTop: 30 }} color={colors.primary} />;
+  return (
+    <View>
+      <ErrorBanner message={error} />
+      {groups.map((g) => (
+        <Card key={g.type} style={{ marginBottom: 10 }}>
+          <Text style={styles.groupTitle}>{t(g.type.toLowerCase())}</Text>
+          {g.accounts.map((a) => (
+            <View key={a.name} style={styles.accountRow}>
+              <Text style={styles.accountName}>{a.name}</Text>
+              <Text style={styles.normalBalance}>
+                {t(a.normalBalance.toLowerCase())}
+              </Text>
+            </View>
+          ))}
+        </Card>
+      ))}
+      <Card>
+        <Text style={styles.groupTitle}>{t("expenseCategories")}</Text>
+        {expenseCats.map((c) => (
+          <View key={c.category} style={styles.accountRow}>
+            <Text style={styles.accountName}>{c.category}</Text>
+            <Text style={styles.normalBalance}>{c.accountName}</Text>
+          </View>
+        ))}
+      </Card>
+    </View>
+  );
+}
+
 // ── Hub ─────────────────────────────────────────────────────────────────────
 
 export function AccountingScreen({ onDone }: { onDone?: () => void }) {
@@ -470,6 +545,7 @@ export function AccountingScreen({ onDone }: { onDone?: () => void }) {
   const [section, setSection] = useState<Section>("pl");
 
   const sections: { key: Section; label: string }[] = [
+    { key: "chart", label: t("chartOfAccounts") },
     { key: "pl", label: t("profitLoss") },
     { key: "bs", label: t("balanceSheet") },
     { key: "cf", label: t("cashFlow") },
@@ -492,13 +568,14 @@ export function AccountingScreen({ onDone }: { onDone?: () => void }) {
           <Chip key={s.key} label={s.label} active={section === s.key} onPress={() => setSection(s.key)} />
         ))}
       </View>
-      <View style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {section === "chart" && <ChartSection />}
         {section === "pl" && <PLSection />}
         {section === "bs" && <BSSection />}
         {section === "cf" && <CFSection />}
         {section === "tb" && <TBSection />}
         {section === "ledger" && <LedgerSection />}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -558,4 +635,18 @@ const styles = StyleSheet.create({
   rowMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   rowAmount: { fontSize: 14, fontWeight: "700" },
   empty: { textAlign: "center", color: colors.textMuted, marginTop: 60, fontSize: 15 },
+  groupTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.primary,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  accountRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+  accountName: { fontSize: 14, color: colors.text },
+  normalBalance: { fontSize: 12, color: colors.textMuted },
 });

@@ -50,6 +50,8 @@ interface SendOptions {
   method?: string;
   body?: unknown;
   token?: string | null;
+  /** Phase 11: return the raw response body text instead of parsed JSON. */
+  rawText?: boolean;
 }
 
 async function send<T>(path: string, options: SendOptions = {}): Promise<T> {
@@ -64,6 +66,13 @@ async function send<T>(path: string, options: SendOptions = {}): Promise<T> {
     });
   } catch {
     throw new ApiError(0, "Network error");
+  }
+  if (options.rawText) {
+    const text = await res.text();
+    if (!res.ok) {
+      throw new ApiError(res.status, text || `Request failed (${res.status})`);
+    }
+    return text as T;
   }
   let json: unknown;
   try {
@@ -104,9 +113,13 @@ export async function api<T>(path: string, options: { method?: string; body?: un
   return send<T>(path, { method: options.method, body: options.body });
 }
 
-export async function authRequest<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function authRequest<T>(
+  path: string,
+  options: { method?: string; body?: unknown; rawText?: boolean } = {}
+): Promise<T> {
   const access = await getStoredAccessToken();
-  const attempt = (tok?: string | null) => send<T>(path, { method: options.method, body: options.body, token: tok });
+  const attempt = (tok?: string | null) =>
+    send<T>(path, { method: options.method, body: options.body, token: tok, rawText: options.rawText });
   try {
     return await attempt(access);
   } catch (err) {

@@ -2,14 +2,18 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { Button, Chip, ErrorBanner, FormModal, Input } from "../src/components/ui";
-import { ApiError, authRequest } from "../src/api";
+import { Button, Chip, ErrorBanner, FormModal, InfoBanner, Input } from "../src/components/ui";
+import { ApiError, API_URL, authRequest, getStoredAccessToken } from "../src/api";
+import { authMutation } from "../src/offline/mutate";
+import { BarcodeScannerModal } from "../src/BarcodeScanner";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
@@ -59,19 +63,23 @@ interface CartLine {
   name: string;
   qty: number;
   unitPrice: number;
+  variantName?: string;
 }
 
 export function SalesScreen() {
   const { t } = useI18n();
-  const { activeBusinessId, activeShopId } = useAuth();
+  const { activeBusinessId, activeShopId, user } = useAuth();
   const [items, setItems] = useState<Sale[]>([]);
   const [products, setProducts] = useState<ProductLite[]>([]);
   const [customers, setCustomers] = useState<CustomerLite[]>([]);
   const [accounts, setAccounts] = useState<AccountLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Phase 12 — scan barcode → server lookup → prefill cart line.
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // New sale form state
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -162,6 +170,57 @@ export function SalesScreen() {
     setError(null);
   };
 
+  // Phase 12 — resolve a scanned/typed barcode against the tenant-scoped
+  // lookup endpoint and drop the product straight into the cart. The server
+  // answers with the authoritative price; a variant's price delta rides on
+  // matchedVariant.priceAdjustmentPaisa.
+  const handleBarcode = async (code: string) => {
+    setScannerOpen(false);
+    setError(null);
+    try {
+      const res = await authRequest<{
+        data: {
+          id: string;
+          name: string;
+          sellingPrice: number;
+          status: string;
+          matchedVariant: { name: string; priceAdjustmentPaisa: number } | null;
+        };
+      }>(
+        `/api/v1/products/lookup/barcode?businessId=${encodeURIComponent(bizId)}&barcode=${encodeURIComponent(code)}`
+      );
+      const p = res.data;
+      if (p.status !== "ACTIVE") {
+        setError(t("productNotActive"));
+        return;
+      }
+      const unitPrice =
+        p.sellingPrice + (p.matchedVariant?.priceAdjustmentPaisa ?? 0);
+      setCart((prev) => {
+        const existing = prev.find((l) => l.productId === p.id && l.variantName === (p.matchedVariant?.name ?? null));
+        if (existing) {
+          return prev.map((l) =>
+            l.productId === p.id && l.variantName === (p.matchedVariant?.name ?? null)
+              ? { ...l, qty: l.qty + 1 }
+              : l
+          );
+        }
+        return [
+          ...prev,
+          {
+            productId: p.id,
+            name: p.matchedVariant ? `${p.name} (${p.matchedVariant.name})` : p.name,
+            qty: 1,
+            unitPrice,
+            variantName: p.matchedVariant?.name ?? undefined,
+          },
+        ];
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("genericError"));
+    }
+  };
+
   const submit = async () => {
     if (cart.length === 0) {
       setError(t("selectItems"));
@@ -178,27 +237,28 @@ export function SalesScreen() {
     }
     setSaving(true);
     setError(null);
+    setInfo(null);
     try {
       // The server recomputes every total from the Product records — the client
       // only proposes productId/qty/unitPrice. localId makes an offline retry
-      // idempotent (duplicate:true returns the original sale).
-      await authRequest("/api/v1/sales", {
-        method: "POST",
-        body: {
-          businessId: bizId,
-          shopId,
-          items: cart.map((l) => ({
-            productId: l.productId,
-            qty: l.qty,
-            unitPrice: l.unitPrice,
-          })),
-          customerId: customerId || null,
-          customerName: walkInName.trim() || null,
-          paidAmount: paid,
-          accountId: accountId || null,
-          localId: newLocalId("sal"),
-        },
+      // idempotent (duplicate:true returns the original sale). A network
+      // failure queues the exact same payload durably for /sync/push.
+      const result = await authMutation(user?.id ?? "", "sale", "/api/v1/sales", {
+        businessId: bizId,
+        shopId,
+        items: cart.map((l) => ({
+          productId: l.productId,
+          qty: l.qty,
+          unitPrice: l.unitPrice,
+          ...(l.variantName ? { variantName: l.variantName } : {}),
+        })),
+        customerId: customerId || null,
+        customerName: walkInName.trim() || null,
+        paidAmount: paid,
+        accountId: accountId || null,
+        localId: newLocalId("sal"),
       });
+      if (result.queued) setInfo(t("queuedOffline"));
       setModalOpen(false);
       setCart([]);
       setCustomerId("");
@@ -223,11 +283,52 @@ export function SalesScreen() {
     setModalOpen(true);
   };
 
+  // Phase 12 — share a server-rendered invoice summary and offer the
+  // print-ready view (browser print dialog → PDF). Every figure comes from
+  // the invoice serializer; nothing is recomputed here.
+  const openInvoice = async (sale: Sale) => {
+    setError(null);
+    try {
+      const res = await authRequest<{
+        data: {
+          invoiceNo: string | null;
+          status: string;
+          paymentStatus: string;
+          counterparty: { name: string | null };
+          items: Array<{ productName: string; variantName?: string | null; qty: number; lineTotal: number }>;
+          totals: { total: number; paidAmount: number; dueAmount: number };
+        };
+      }>(
+        `/api/v1/invoices/sales/${sale.id}?businessId=${encodeURIComponent(bizId)}&shopId=${encodeURIComponent(shopId)}`
+      );
+      const inv = res.data;
+      const lines = inv.items
+        .map((l) => `• ${l.productName}${l.variantName ? ` (${l.variantName})` : ""} ×${l.qty} — ${formatTaka(l.lineTotal)}`)
+        .join("\n");
+      const summary = `${t("invoice")} ${inv.invoiceNo ?? sale.id}\n${lines}\n${t("total")}: ${formatTaka(
+        inv.totals.total
+      )} · ${t("due")}: ${formatTaka(inv.totals.dueAmount)}`;
+      await Share.share({ title: t("invoice"), message: summary });
+      // Print/PDF via the authoritative HTML view. Browsers cannot set
+      // Authorization headers, so the short-lived access token rides in the
+      // query (verified identically by requireAuth).
+      const token = await getStoredAccessToken();
+      void Linking.openURL(
+        `${API_URL}/api/v1/invoices/sales/${sale.id}/print?businessId=${encodeURIComponent(
+          bizId
+        )}&shopId=${encodeURIComponent(shopId)}${token ? `&access_token=${encodeURIComponent(token)}` : ""}`
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("genericError"));
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.toolbar}>
         <Button title={`+ ${t("newSale")}`} onPress={openNew} />
       </View>
+      <InfoBanner message={info} />
       <ErrorBanner message={error} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
@@ -250,6 +351,9 @@ export function SalesScreen() {
                 <Text style={styles.rowDue}>
                   {t("dueAmount")}: {formatTaka(item.dueAmount)}
                 </Text>
+                <Pressable onPress={() => void openInvoice(item)} hitSlop={8}>
+                  <Text style={styles.invoiceLink}>🧾 {t("invoice")}</Text>
+                </Pressable>
               </View>
             </View>
           )}
@@ -278,6 +382,8 @@ export function SalesScreen() {
             <View style={{ width: 8 }} />
             <Button title={`+ ${t("addToCart")}`} onPress={addToCart} />
           </View>
+          <View style={{ height: 8 }} />
+          <Button title={t("scanBarcode")} onPress={() => setScannerOpen(true)} variant="secondary" />
 
           {cart.length > 0 && (
             <View style={{ marginTop: 12 }}>
@@ -335,6 +441,12 @@ export function SalesScreen() {
           <Button title={t("save")} onPress={submit} loading={saving} />
         </ScrollView>
       </FormModal>
+
+      <BarcodeScannerModal
+        visible={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanned={(code) => void handleBarcode(code)}
+      />
     </View>
   );
 }
@@ -391,6 +503,12 @@ const styles = StyleSheet.create({
   rowName: { fontSize: 15, fontWeight: "600", color: colors.text },
   rowMeta: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   rowTotal: { fontSize: 14, fontWeight: "700", color: colors.primary },
+  invoiceLink: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.primary,
+    marginTop: 4,
+  },
   rowDue: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   empty: { textAlign: "center", color: colors.textMuted, marginTop: 60, fontSize: 15 },
 });

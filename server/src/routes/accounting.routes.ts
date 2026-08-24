@@ -18,6 +18,9 @@ router.use(resolveBusiness, assertShopAccess);
 router.use(requireRole("Owner", "Admin", "Manager", "Accountant"));
 
 router.get("/journal", controller.listJournal);
+// Phase 12 — canonical chart of accounts (registered before /:id-style paths;
+// there are none here, but keep the read grouped with its siblings).
+router.get("/chart", controller.chart);
 router.get("/ledger", controller.generalLedger);
 router.get("/trial-balance", controller.trialBalance);
 router.get("/profit-loss", controller.profitLoss);

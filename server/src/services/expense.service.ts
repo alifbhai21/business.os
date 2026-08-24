@@ -2,9 +2,9 @@ import { Types, ClientSession } from "mongoose";
 import { Expense, ExpenseDocument } from "../models/Expense";
 import { Account } from "../models/Account";
 import { AuditLog } from "../models/AuditLog";
+import { Business } from "../models/Business";
 import {
   EXPENSE_CATEGORIES,
-  ExpenseCategory,
   expenseAccountName,
   journalAssetAccountFor,
 } from "../config/accounts";
@@ -19,7 +19,8 @@ import { ApiError } from "../utils/ApiError";
 export interface CreateExpenseInput {
   businessId: string;
   shopId: string;
-  category: ExpenseCategory;
+  /** Built-in enum value or a business-custom category (service-validated). */
+  category: string;
   amount: number;
   paymentAccountId: string;
   note?: string | null;
@@ -93,10 +94,21 @@ export async function createExpense(
 ): Promise<{ expense: ReturnType<typeof toPublic>; duplicate: boolean }> {
   assertSafePaisa(input.amount, "amount");
   if (input.amount <= 0) throw ApiError.badRequest("amount must be positive paisa");
-  if (!(EXPENSE_CATEGORIES as readonly string[]).includes(input.category)) {
+  await assertCanRecord(userId, input.businessId, input.shopId);
+
+  // Phase 12 — category must be a built-in OR one of the business's custom
+  // categories (validated against live Business state, not a static list).
+  const business = await Business.findById(input.businessId)
+    .select("customExpenseCategories")
+    .lean();
+  if (!business) throw ApiError.notFound("Business not found");
+  const allowed = new Set<string>([
+    ...(EXPENSE_CATEGORIES as readonly string[]),
+    ...(business.customExpenseCategories ?? []),
+  ]);
+  if (!allowed.has(input.category)) {
     throw ApiError.badRequest("Invalid expense category");
   }
-  await assertCanRecord(userId, input.businessId, input.shopId);
 
   const run = async (session: ClientSession | null) => {
     if (input.localId) {

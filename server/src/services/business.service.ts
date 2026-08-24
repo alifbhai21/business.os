@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { Business, BusinessDocument, BusinessType } from "../models/Business";
 import { BusinessMembership } from "../models/BusinessMembership";
+import { AuditLog } from "../models/AuditLog";
 import { ApiError } from "../utils/ApiError";
 import { modulesForType, ModuleKey } from "../config/businessTypes";
 
@@ -23,6 +24,8 @@ export interface UpdateBusinessInput {
   phone?: string | null;
   email?: string | null;
   allowNegativeStock?: boolean;
+  /** Phase 12 — custom expense categories (uppercased, max 15). */
+  customExpenseCategories?: string[];
 }
 
 export interface BusinessModules {
@@ -44,6 +47,7 @@ function toPublic(business: BusinessDocument) {
     phone: business.phone,
     email: business.email,
     logo: business.logo,
+    customExpenseCategories: business.customExpenseCategories ?? [],
     status: business.status,
     createdAt: business.createdAt,
     updatedAt: business.updatedAt,
@@ -75,6 +79,15 @@ export async function createBusiness(userId: string, input: CreateBusinessInput)
     businessId: business._id,
     role: "Owner",
     status: "ACTIVE",
+  });
+  // Phase 09 — business creation is a sensitive onboarding action.
+  await AuditLog.create({
+    userId: new Types.ObjectId(userId),
+    businessId: business._id,
+    shopId: null,
+    action: "BUSINESS_CREATED",
+    recordId: String(business._id),
+    details: JSON.stringify({ name: input.name, type: input.type }),
   });
   return toPublic(business);
 }
@@ -109,8 +122,35 @@ export async function updateBusinessForUser(userId: string, businessId: string, 
   if (input.phone !== undefined) patch.phone = input.phone;
   if (input.email !== undefined) patch.email = input.email;
   if (input.allowNegativeStock !== undefined) patch.allowNegativeStock = input.allowNegativeStock;
+  if (input.customExpenseCategories !== undefined) {
+    // Phase 12 — normalized: uppercase, trimmed, deduped, capped. These flow
+    // into expense validation and journal account naming unchanged.
+    const seen = new Set<string>();
+    const categories: string[] = [];
+    for (const raw of input.customExpenseCategories) {
+      const c = raw.trim().toUpperCase();
+      if (!c || c.length > 30) throw ApiError.badRequest("Custom category must be 1-30 characters");
+      if (!seen.has(c)) {
+        seen.add(c);
+        categories.push(c);
+      }
+    }
+    if (categories.length > 15) {
+      throw ApiError.badRequest("At most 15 custom expense categories");
+    }
+    patch.customExpenseCategories = categories;
+  }
   Object.assign(business, patch);
   await business.save();
+  // Phase 09 — business settings changes are sensitive (Owner/Admin only).
+  await AuditLog.create({
+    userId: new Types.ObjectId(userId),
+    businessId: business._id,
+    shopId: null,
+    action: "BUSINESS_UPDATED",
+    recordId: String(business._id),
+    details: JSON.stringify({ changes: patch }),
+  });
   return toPublic(business);
 }
 

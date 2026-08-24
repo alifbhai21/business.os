@@ -17,6 +17,10 @@ export function BusinessSettingsScreen({ onDone }: { onDone: () => void }) {
   const [phone, setPhone] = useState(business?.phone ?? "");
   const [email, setEmail] = useState(business?.email ?? "");
   const [allowNegativeStock, setAllowNegativeStock] = useState(business?.allowNegativeStock ?? false);
+  // Phase 12 — custom expense categories (comma-separated input).
+  const [customCategories, setCustomCategories] = useState(
+    (business?.customExpenseCategories ?? []).join(", ")
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -46,6 +50,10 @@ export function BusinessSettingsScreen({ onDone }: { onDone: () => void }) {
           phone: phone.trim() || null,
           email: email.trim() || null,
           allowNegativeStock,
+          customExpenseCategories: customCategories
+            .split(",")
+            .map((c) => c.trim())
+            .filter(Boolean),
         },
       });
       await loadBusinesses();
@@ -88,6 +96,14 @@ export function BusinessSettingsScreen({ onDone }: { onDone: () => void }) {
 
           <SectionTitle>{t("address")}</SectionTitle>
           <Input value={address} onChangeText={setAddress} placeholder={t("address")} />
+
+          <SectionTitle>{t("customCategoriesLabel")}</SectionTitle>
+          <Input
+            value={customCategories}
+            onChangeText={setCustomCategories}
+            placeholder={`${t("customCategoriesHint")}: Delivery, Marketing Online`}
+            autoCapitalize="none"
+          />
 
           <SectionTitle>{t("status")}</SectionTitle>
           <Card>

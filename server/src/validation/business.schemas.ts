@@ -24,6 +24,10 @@ export const businessUpdateSchema = z.object({
   phone: phoneEnum,
   email: z.string().email().optional().nullable(),
   allowNegativeStock: z.boolean().optional(),
+  customExpenseCategories: z
+    .array(z.string().trim().min(1).max(30))
+    .max(15, "at most 15 custom categories")
+    .optional(),
 });
 
 export const shopCreateSchema = z.object({

@@ -58,6 +58,13 @@ export interface StockMovementDocument extends Document {
   refType: StockMovementRefType;
   refId: Types.ObjectId;
   createdBy: Types.ObjectId | null;
+  /**
+   * Phase 12 — offline-sync idempotency anchor for ADJUSTMENT/DAMAGE/OPENING
+   * movements created from the mobile queue. Null for engine-generated
+   * movements (sale/purchase/return/transfer), which are already exactly-once
+   * via their source documents.
+   */
+  localId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +82,7 @@ const stockMovementSchema = new Schema<StockMovementDocument>(
     refType: { type: String, enum: [...STOCK_MOVEMENT_REF_TYPES], required: true },
     refId: { type: Schema.Types.ObjectId, required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+  localId: { type: String, default: null, trim: true, maxlength: 80 },
   },
   { timestamps: true }
 );
@@ -91,6 +99,12 @@ stockMovementSchema.index(
 // Product stock history and per-shop inventory ledger reads.
 stockMovementSchema.index({ businessId: 1, productId: 1, createdAt: -1 });
 stockMovementSchema.index({ businessId: 1, shopId: 1, createdAt: -1 });
+// Phase 12 offline-sync idempotency: one queued adjustment/opening per
+// business-scoped localId (engine movements carry null and are excluded).
+stockMovementSchema.index(
+  { businessId: 1, refType: 1, localId: 1 },
+  { unique: true, partialFilterExpression: { localId: { $type: "string" } } }
+);
 
 export const StockMovement = model<StockMovementDocument>(
   "StockMovement",

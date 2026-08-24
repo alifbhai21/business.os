@@ -13,6 +13,8 @@ export const supplierCreateSchema = z.object({
   company: z.string().trim().max(120).optional().nullable(),
   address: optionalText,
   openingBalance: paisa.default(0),
+  // Phase 10 — offline-sync idempotency anchor (never required online).
+  localId: z.string().trim().max(80).optional().nullable(),
 });
 
 export const supplierUpdateSchema = z.object({

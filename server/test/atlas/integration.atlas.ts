@@ -13,7 +13,9 @@ import {
   createCustomer,
   createSupplier,
   grantRole,
+  loginUser,
   uid,
+  DEV,
 } from "./factories/factories";
 import { Account } from "../../src/models/Account";
 import { Product } from "../../src/models/Product";
@@ -29,6 +31,9 @@ import { JournalLine } from "../../src/models/JournalLine";
 import { AuditLog } from "../../src/models/AuditLog";
 import { BusinessMembership } from "../../src/models/BusinessMembership";
 import { Device } from "../../src/models/Device";
+import { Employee } from "../../src/models/Employee";
+import { RefreshToken } from "../../src/models/RefreshToken";
+import { SyncEvent } from "../../src/models/SyncEvent";
 import { JOURNAL_ACCOUNTS, expenseAccountName } from "../../src/config/accounts";
 
 /**
@@ -718,4 +723,834 @@ test("REAL-ATLAS: /search finds seeded Atlas documents; foreign tenant does not 
   // RBAC parity with catalog reads: any active member may search.
   const anon = await request(app).get(`/api/v1/search?q=${marker}&businessId=${a.biz.id}`);
   assert.equal(anon.status, 401);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// PHASE 09 — employees, roles & devices over REAL Atlas.
+//
+// Every assertion goes HTTP -> Express -> controller -> service ->
+// business_os_api_test and then re-reads the raw Atlas documents. The DB
+// persists across runs, so all figures are deltas or uniquely-marked docs.
+// ══════════════════════════════════════════════════════════════════════════
+
+test("REAL-ATLAS: employee unique partial index exists on the real collection", async () => {
+  assertOnTestDb();
+  // Deterministic: sync the model's indexes into Atlas before asserting.
+  await Employee.syncIndexes();
+  const idx = await Employee.collection.indexes();
+  const phoneUnique = idx.find(
+    (i) => JSON.stringify(i.key) === JSON.stringify({ businessId: 1, phone: 1 }) && i.unique === true
+  );
+  assert.ok(phoneUnique, "Employee (businessId, phone) unique index missing");
+  const filter = (phoneUnique as { partialFilterExpression?: Record<string, unknown> })
+    .partialFilterExpression;
+  assert.ok(filter, "partialFilterExpression required so REMOVED history stays un-unique");
+  assert.deepEqual(
+    filter!.status,
+    { $in: ["ACTIVE", "INVITED", "SUSPENDED"] },
+    "uniqueness domain must cover exactly the live statuses"
+  );
+});
+
+test("REAL-ATLAS: POST /employees invites an existing user -> ACTIVE + membership + audit in Atlas", async () => {
+  const staff = await registerUser("empstaff");
+  const res = await post("/api/v1/employees", a.owner.accessToken, {
+    businessId: a.biz.id,
+    shopId: a.shop.id,
+    name: "Atlas Staff",
+    phone: staff.phone,
+    role: "Salesperson",
+  });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(res.body.data.status, "ACTIVE");
+  assert.equal(res.body.data.userId, staff.user.id);
+
+  const emp = await Employee.findOne({ _id: OBJ(res.body.data.id) });
+  assert.ok(emp);
+  assert.equal(String(emp!.businessId), a.biz.id);
+  assert.equal(String(emp!.shopId), a.shop.id);
+  assert.equal(String(emp!.userId), staff.user.id);
+  assert.equal(emp!.phone, staff.phone);
+  assert.equal(emp!.role, "Salesperson");
+
+  const mem = await BusinessMembership.findOne({
+    userId: OBJ(staff.user.id),
+    businessId: OBJ(a.biz.id),
+  });
+  assert.ok(mem, "membership must be created for a linked account");
+  assert.equal(mem!.role, "Salesperson");
+  assert.equal(mem!.status, "ACTIVE");
+  assert.ok(mem!.permissions.includes("sales:create"), "role permissions expanded server-side");
+
+  const audit = await AuditLog.findOne({
+    businessId: OBJ(a.biz.id),
+    action: "EMPLOYEE_CREATED",
+    recordId: String(emp!._id),
+  });
+  assert.ok(audit, "EMPLOYEE_CREATED audit must exist");
+});
+
+test("REAL-ATLAS: unknown-phone invite stays INVITED; duplicate live phone is 409 on real Atlas", async () => {
+  const invitePhone = "02" + Math.floor(10000000 + Math.random() * 89999999);
+  const memBefore = await BusinessMembership.countDocuments({ businessId: OBJ(a.biz.id) });
+
+  const invited = await post("/api/v1/employees", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: "Atlas Invited",
+    phone: invitePhone,
+    role: "Viewer",
+  });
+  assert.equal(invited.status, 201);
+  assert.equal(invited.body.data.status, "INVITED");
+  assert.equal(invited.body.data.userId, null);
+
+  const empDoc = await Employee.findOne({ _id: OBJ(invited.body.data.id) });
+  assert.ok(empDoc);
+  assert.equal(empDoc!.userId, null, "no linked account for an unknown phone");
+
+  // Duplicate live phone in the SAME business -> 409. This proves the unique
+  // partial index actually enforces uniqueness on real MongoDB (the $ne
+  // variant silently never built).
+  const dup = await post("/api/v1/employees", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: "Atlas Duplicate",
+    phone: invitePhone,
+    role: "Viewer",
+  });
+  assert.equal(dup.status, 409, "unique partial index must reject duplicates");
+
+  // Same phone in ANOTHER business is fine (business-scoped uniqueness).
+  const otherBiz = await post("/api/v1/employees", b.owner.accessToken, {
+    businessId: b.biz.id,
+    name: "Other Biz Same Phone",
+    phone: invitePhone,
+    role: "Viewer",
+  });
+  assert.equal(otherBiz.status, 201);
+
+  assert.equal(
+    await BusinessMembership.countDocuments({ businessId: OBJ(a.biz.id) }),
+    memBefore,
+    "invited flow adds no membership"
+  );
+});
+
+test("REAL-ATLAS: roles — Manager blocked, Owner assigns, membership+audit follow in Atlas", async () => {
+  const staff = await registerUser("rolstf");
+  const created = await post("/api/v1/employees", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: "Role Staff",
+    phone: staff.phone,
+    role: "Salesperson",
+  });
+  assert.equal(created.status, 201);
+  const employeeId = created.body.data.id as string;
+
+  const manager = await registerUser("rolmgr");
+  const mgrEmp = await post("/api/v1/employees", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: "Atlas Manager",
+    phone: manager.phone,
+    role: "Manager",
+  });
+  assert.equal(mgrEmp.status, 201);
+
+  // Privilege escalation attempt: Manager cannot assign Admin.
+  const mgrDeny = await post("/api/v1/roles", manager.accessToken, {
+    businessId: a.biz.id,
+    employeeId,
+    role: "Admin",
+  });
+  assert.equal(mgrDeny.status, 403, "privilege escalation must be blocked");
+
+  // Unknown permission names are rejected outright.
+  const badPerm = await post("/api/v1/roles", a.owner.accessToken, {
+    businessId: a.biz.id,
+    employeeId,
+    role: "Salesperson",
+    permissions: ["not:a-permission"],
+  });
+  assert.equal(badPerm.status, 400);
+
+  // Owner assigns Accountant + an explicit extra permission.
+  const ok = await post("/api/v1/roles", a.owner.accessToken, {
+    businessId: a.biz.id,
+    employeeId,
+    role: "Accountant",
+    permissions: ["reports:view"],
+  });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.data.role, "Accountant");
+
+  const mem = await BusinessMembership.findOne({
+    userId: OBJ(staff.user.id),
+    businessId: OBJ(a.biz.id),
+  });
+  assert.ok(mem);
+  assert.equal(mem!.role, "Accountant", "membership follows the API change");
+  assert.ok(mem!.permissions.includes("reports:view"), "extra permission persisted");
+  assert.ok(mem!.permissions.includes("payments:create"), "role defaults expanded server-side");
+
+  // Audit row records previous != new role (mutation-order bug fixed).
+  const audit = await AuditLog.findOne({
+    businessId: OBJ(a.biz.id),
+    action: "ROLE_ASSIGNED",
+    recordId: employeeId,
+  }).sort({ createdAt: -1 });
+  assert.ok(audit, "ROLE_ASSIGNED audit must exist");
+  const details = JSON.parse(audit!.details ?? "{}") as { previousRole?: string; newRole?: string };
+  assert.equal(details.previousRole, "Salesperson");
+  assert.equal(details.newRole, "Accountant");
+});
+
+test("REAL-ATLAS: device register links signup row; revoke kills its live refresh tokens in Atlas", async () => {
+  const staff = await registerUser("devstf");
+
+  // Staff must be a member before any device belongs to the business.
+  const emp = await post("/api/v1/employees", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: "Device Staff",
+    phone: staff.phone,
+    role: "Manager",
+  });
+  assert.equal(emp.status, 201, JSON.stringify(emp.body));
+
+  // Signup already created the Device row; POST /devices links it into the
+  // business — the idempotent path returns 200 duplicate:true.
+  const reg = await post("/api/v1/devices", staff.accessToken, {
+    businessId: a.biz.id,
+    deviceId: DEV.deviceId + "-devstf",
+    deviceName: "Atlas Staff Phone",
+  });
+  assert.ok([200, 201].includes(reg.status), JSON.stringify(reg.body));
+  assert.equal(reg.body.data.businessId, a.biz.id);
+  const deviceDocId = reg.body.data.id as string;
+
+  const dev = await Device.findById(deviceDocId);
+  assert.ok(dev);
+  assert.equal(String(dev!.userId), staff.user.id);
+  assert.equal(String(dev!.businessId), a.biz.id);
+  assert.equal(dev!.status, "ACTIVE");
+
+  // A live refresh token exists from registration against this device doc.
+  const liveBefore = await RefreshToken.countDocuments({
+    deviceId: OBJ(deviceDocId),
+    revokedAt: null,
+  });
+
+  const revokeRes = await request(app)
+    .put(`/api/v1/devices/${deviceDocId}/revoke`)
+    .set("Authorization", `Bearer ${a.owner.accessToken}`)
+    .send({ businessId: a.biz.id });
+  assert.equal(revokeRes.status, 200, JSON.stringify(revokeRes.body));
+  assert.equal(revokeRes.body.data.status, "REVOKED");
+
+  if (liveBefore > 0) {
+    const stillLive = await RefreshToken.countDocuments({
+      deviceId: OBJ(deviceDocId),
+      revokedAt: null,
+    });
+    assert.equal(stillLive, 0, "revocation must terminate outstanding sessions");
+  }
+
+  // Re-revoke is idempotent.
+  const again = await request(app)
+    .put(`/api/v1/devices/${deviceDocId}/revoke`)
+    .set("Authorization", `Bearer ${a.owner.accessToken}`)
+    .send({ businessId: a.biz.id });
+  assert.equal(again.status, 200);
+  assert.equal(again.body.data.duplicate, true);
+
+  const audit = await AuditLog.findOne({
+    businessId: OBJ(a.biz.id),
+    action: "DEVICE_REVOKED",
+    recordId: deviceDocId,
+  });
+  assert.ok(audit, "DEVICE_REVOKED audit must exist");
+
+  // Sync heartbeat: only the device owner may report it.
+  const foreignSync = await request(app)
+    .put(`/api/v1/devices/${deviceDocId}/sync`)
+    .set("Authorization", `Bearer ${a.owner.accessToken}`)
+    .send({ businessId: a.biz.id });
+  assert.equal(foreignSync.status, 403, "non-owner cannot heartbeat someone else's device");
+
+  const ownSync = await request(app)
+    .put(`/api/v1/devices/${deviceDocId}/sync`)
+    .set("Authorization", `Bearer ${staff.accessToken}`)
+    .send({ businessId: a.biz.id });
+  assert.equal(ownSync.status, 403, "revoked device cannot heartbeat");
+});
+
+test("REAL-ATLAS: GET /audit reads real Atlas rows with pagination, filter, RBAC + isolation", async () => {
+  // Business creation itself is now audited (Phase 09 extension).
+  const mine = await get(`/api/v1/audit?businessId=${a.biz.id}&limit=100`, a.owner.accessToken);
+  assert.equal(mine.status, 200);
+  const actions = (mine.body.data.data as Array<{ action: string }>).map((r) => r.action);
+  assert.ok(actions.includes("BUSINESS_CREATED"), "business creation must be audited");
+  assert.ok(actions.some((x) => x.startsWith("EMPLOYEE_")), "employee actions must be audited");
+
+  // Actor resolution join works on real users.
+  const row = (mine.body.data.data as Array<Record<string, unknown>>).find(
+    (r) => r.action === "BUSINESS_CREATED"
+  );
+  assert.ok(row && row.userName, "actor name resolved from Atlas users");
+
+  // Action filter matches only its rows.
+  const filtered = await get(
+    `/api/v1/audit?businessId=${a.biz.id}&action=EMPLOYEE_CREATED&limit=100`,
+    a.owner.accessToken
+  );
+  assert.equal(filtered.status, 200);
+  for (const r of filtered.body.data.data as Array<{ action: string }>) {
+    assert.equal(r.action, "EMPLOYEE_CREATED");
+  }
+
+  // Pagination envelope is real.
+  const page = await get(
+    `/api/v1/audit?businessId=${a.biz.id}&limit=1&page=2`,
+    a.owner.accessToken
+  );
+  assert.equal(page.status, 200);
+  assert.ok(page.body.data.pagination.total >= 2, "enough seeded rows for page 2");
+  assert.equal((page.body.data.data as unknown[]).length, 1);
+
+  // RBAC: Salesperson cannot read the audit trail.
+  const salesperson = await registerUser("audsp");
+  const spEmp = await post("/api/v1/employees", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: "Audit Salesperson",
+    phone: salesperson.phone,
+    role: "Salesperson",
+  });
+  assert.equal(spEmp.status, 201);
+  const denied = await get(`/api/v1/audit?businessId=${a.biz.id}`, salesperson.accessToken);
+  assert.equal(denied.status, 403);
+
+  // Tenant isolation: owner B cannot read A's trail.
+  const foreign = await get(`/api/v1/audit?businessId=${a.biz.id}`, b.owner.accessToken);
+  assert.equal(foreign.status, 404);
+
+  // Shop pinning: an employee pinned to A's shop cannot widen scope.
+  const pinnedOwner = await registerUser("audpin");
+  await post("/api/v1/shops", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: `PinShop-${uid("ps")}`,
+    branchCode: `PS-${uid("psc").slice(0, 10)}`,
+  }).then(async (shopRes) => {
+    assert.equal(shopRes.status, 201);
+    const emp = await post("/api/v1/employees", a.owner.accessToken, {
+      businessId: a.biz.id,
+      shopId: shopRes.body.data.id,
+      name: "Pinned Manager",
+      phone: pinnedOwner.phone,
+      // Manager CAN read audit (in VIEW_ROLES) — only pinning can stop it.
+      role: "Manager",
+    });
+    assert.equal(emp.status, 201);
+    const widened = await get(
+      `/api/v1/audit?businessId=${a.biz.id}&shopId=${a.shop.id}`,
+      pinnedOwner.accessToken
+    );
+    assert.equal(widened.status, 404, "pinned member cannot read another shop's rows");
+  });
+
+  // Invalid date filter -> 400 via Zod.
+  const badDate = await get(
+    `/api/v1/audit?businessId=${a.biz.id}&from=not-a-date`,
+    a.owner.accessToken
+  );
+  assert.equal(badDate.status, 400);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// PHASE 10 — offline sync (push/pull) over REAL Atlas.
+//
+// The queue contract is proven end to end: HTTP push -> dispatcher ->
+// verified Phase 05 engines -> business_os_api_test documents, with
+// exactly-once effects under retries and concurrency, per-op conflict
+// isolation and the SyncEvent trail.
+// ══════════════════════════════════════════════════════════════════════════
+
+test("REAL-ATLAS: sync push commits a queued sale; retry is exactly-once in Atlas", async () => {
+  const before = (await Account.findOne({ _id: OBJ(a.account.id) }))!.currentBalance;
+  const localId = uid("q-sale");
+
+  const body = {
+    businessId: a.biz.id,
+    shopId: a.shop.id,
+    ops: [
+      {
+        localId,
+        type: "sale",
+        payload: {
+          items: [{ productId: a.product.id, qty: 2 }],
+          paidAmount: 40000,
+          accountId: a.account.id,
+        },
+      },
+    ],
+  };
+
+  const first = await post("/api/v1/sync/push", a.owner.accessToken, body);
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  const r1 = first.body.data.results[0];
+  assert.equal(r1.status, "SYNCED");
+  assert.equal(r1.duplicate, false);
+
+  // Raw Atlas documents — the full Phase 05 chain ran for the queued op.
+  const sale = await Sale.findOne({ businessId: OBJ(a.biz.id), localId });
+  assert.ok(sale, "sale must exist in Atlas");
+  assert.equal(sale!.status, "COMPLETED");
+  assert.equal(sale!.total, 40000);
+  assert.ok(sale!.deviceId, "device identity snapshotted from JWT claims");
+
+  const movement = await StockMovement.findOne({ refType: "SALE", refId: sale!._id });
+  assert.ok(movement);
+  assert.equal(movement!.qtyChange, -2);
+
+  const entry = await JournalEntry.findOne({ referenceType: "SALE", referenceId: sale!._id });
+  assert.ok(entry);
+  const lines = await JournalLine.find({ entryId: entry!._id });
+  assert.equal(
+    lines.reduce((s, l) => s + l.debit, 0),
+    lines.reduce((s, l) => s + l.credit, 0),
+    "queued sale journal must be balanced"
+  );
+
+  assert.equal(
+    (await Account.findOne({ _id: OBJ(a.account.id) }))!.currentBalance,
+    before + 40000
+  );
+
+  // Retried push of the SAME op -> duplicate:true, zero additional effect.
+  const retry = await post("/api/v1/sync/push", a.owner.accessToken, body);
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.data.results[0].status, "SYNCED");
+  assert.equal(retry.body.data.results[0].duplicate, true);
+  assert.equal(await Sale.countDocuments({ businessId: OBJ(a.biz.id), localId }), 1);
+  assert.equal(
+    (await Account.findOne({ _id: OBJ(a.account.id) }))!.currentBalance,
+    before + 40000,
+    "exactly one credit in Atlas across the retry"
+  );
+
+  // SyncEvent trail recorded both pushes.
+  const events = await SyncEvent.countDocuments({
+    businessId: OBJ(a.biz.id),
+    direction: "PUSH",
+  });
+  assert.ok(events >= 2, "push events logged");
+});
+
+test("REAL-ATLAS: concurrent pushes of one localId credit Atlas exactly once", async () => {
+  const before = (await Account.findOne({ _id: OBJ(a.account.id) }))!.currentBalance;
+  const localId = uid("q-conc");
+
+  const body = {
+    businessId: a.biz.id,
+    shopId: a.shop.id,
+    ops: [
+      {
+        localId,
+        type: "sale",
+        payload: { items: [{ productId: a.product.id, qty: 1 }], paidAmount: 20000, accountId: a.account.id },
+      },
+    ],
+  };
+  const responses = await Promise.all([
+    post("/api/v1/sync/push", a.owner.accessToken, body),
+    post("/api/v1/sync/push", a.owner.accessToken, body),
+  ]);
+  for (const r of responses) {
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.data.results[0].status, "SYNCED");
+  }
+
+  assert.equal(await Sale.countDocuments({ businessId: OBJ(a.biz.id), localId }), 1);
+  assert.equal(
+    (await Account.findOne({ _id: OBJ(a.account.id) }))!.currentBalance,
+    before + 20000,
+    "concurrent retries must credit once"
+  );
+});
+
+test("REAL-ATLAS: queued master-data create + retry leaves ONE document", async () => {
+  const localId = uid("q-cust");
+  const body = {
+    businessId: a.biz.id,
+    ops: [{ localId, type: "customer", payload: { name: "Atlas Queued Customer" } }],
+  };
+  const first = await post("/api/v1/sync/push", a.owner.accessToken, body);
+  const second = await post("/api/v1/sync/push", a.owner.accessToken, body);
+  assert.equal(first.body.data.results[0].status, "SYNCED");
+  assert.equal(second.body.data.results[0].duplicate, true);
+  assert.equal(await Customer.countDocuments({ businessId: OBJ(a.biz.id), localId }), 1);
+});
+
+test("REAL-ATLAS: per-op conflicts isolate — bad op rejected, batch still processes", async () => {
+  const before = (await Account.findOne({ _id: OBJ(a.account.id) }))!.currentBalance;
+  const res = await post("/api/v1/sync/push", a.owner.accessToken, {
+    businessId: a.biz.id,
+    shopId: a.shop.id,
+    ops: [
+      {
+        localId: uid("q-bad"),
+        type: "sale",
+        payload: { items: [{ productId: b.product.id, qty: 1 }], paidAmount: 15000 },
+      },
+      {
+        localId: uid("q-exp"),
+        type: "expense",
+        payload: { category: "OTHER", amount: 1000, paymentAccountId: a.account.id },
+      },
+    ],
+  });
+  assert.equal(res.status, 200);
+  const results = res.body.data.results;
+  assert.equal(results[0].status, "CONFLICT", "foreign product must be rejected");
+  assert.equal(results[1].status, "SYNCED");
+  assert.equal(
+    (await Account.findOne({ _id: OBJ(a.account.id) }))!.currentBalance,
+    before - 1000,
+    "only the valid op moved money"
+  );
+});
+
+test("REAL-ATLAS: pull returns an Atlas delta since cursor with tenant isolation", async () => {
+  const first = await get(`/api/v1/sync/pull?businessId=${a.biz.id}`, a.owner.accessToken);
+  assert.equal(first.status, 200);
+  assert.ok(first.body.data.counts.products >= 1);
+  const cursor = first.body.data.cursor as string;
+
+  const marker = uid("pull-p");
+  await post("/api/v1/products", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: `Pull Delta ${marker}`,
+    unit: "piece",
+  });
+
+  const delta = await get(
+    `/api/v1/sync/pull?businessId=${a.biz.id}&cursor=${encodeURIComponent(cursor)}`,
+    a.owner.accessToken
+  );
+  assert.equal(delta.status, 200);
+  assert.equal(delta.body.data.counts.products, 1);
+  assert.equal(delta.body.data.products[0].name, `Pull Delta ${marker}`);
+
+  const foreign = await get(`/api/v1/sync/pull?businessId=${a.biz.id}`, b.owner.accessToken);
+  assert.equal(foreign.status, 404);
+
+  const pullEvents = await SyncEvent.countDocuments({
+    businessId: OBJ(a.biz.id),
+    direction: "PULL",
+  });
+  assert.ok(pullEvents >= 2, "pull events logged");
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// PHASE 11 — backup status, new-device restore and data export vs REAL Atlas
+// ══════════════════════════════════════════════════════════════════════════
+
+test("REAL-ATLAS: backup/status counts equal the raw Atlas collection counts", async () => {
+  const res = await get(`/api/v1/backup/status?businessId=${a.biz.id}`, a.owner.accessToken);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const s = res.body.data;
+
+  const [products, sales, expenses, journalEntries] = await Promise.all([
+    Product.countDocuments({ businessId: OBJ(a.biz.id) }),
+    Sale.countDocuments({ businessId: OBJ(a.biz.id) }),
+    Expense.countDocuments({ businessId: OBJ(a.biz.id) }),
+    JournalEntry.countDocuments({ businessId: OBJ(a.biz.id) }),
+  ]);
+  assert.equal(s.counts.products, products);
+  assert.equal(s.counts.sales, sales);
+  assert.equal(s.counts.expenses, expenses);
+  assert.equal(s.counts.journalEntries, journalEntries);
+
+  assert.equal(s.connected, true);
+  assert.equal(s.database, "business_os_api_test");
+  assert.ok(s.lastWriteAt, "last write visible from real Atlas data");
+});
+
+test("REAL-ATLAS: restore on a NEW device returns the full dataset from Atlas", async () => {
+  // The SAME account logs in from a brand-new device id — exactly the
+  // PRD's "restore on login to a new device" scenario.
+  const fresh = await loginUser((a.owner.user as { email?: string }).email ?? "", "password123", uid("new-device"));
+  assert.ok(fresh.accessToken, "new-device login succeeded");
+  void fresh;
+
+  const res = await get(`/api/v1/sync/restore?businessId=${a.biz.id}`, a.owner.accessToken);
+  assert.equal(res.status, 200, JSON.stringify(res.body).slice(0, 300));
+  const d = res.body.data;
+
+  const [products, customers, suppliers, sales, purchases, payments, expenses, movements] =
+    await Promise.all([
+      Product.countDocuments({ businessId: OBJ(a.biz.id) }),
+      Customer.countDocuments({ businessId: OBJ(a.biz.id) }),
+      Supplier.countDocuments({ businessId: OBJ(a.biz.id) }),
+      Sale.countDocuments({ businessId: OBJ(a.biz.id) }),
+      Purchase.countDocuments({ businessId: OBJ(a.biz.id) }),
+      Payment.countDocuments({ businessId: OBJ(a.biz.id) }),
+      Expense.countDocuments({ businessId: OBJ(a.biz.id) }),
+      StockMovement.countDocuments({ businessId: OBJ(a.biz.id) }),
+    ]);
+
+  assert.equal(d.counts.products, products);
+  assert.equal(d.counts.customers, customers);
+  assert.equal(d.counts.suppliers, suppliers);
+  assert.equal(d.counts.sales, sales);
+  assert.ok(sales >= 2, "the earlier Atlas sale is part of the restore");
+  assert.equal(d.counts.purchases, purchases);
+  assert.equal(d.counts.payments, payments);
+  assert.equal(d.counts.expenses, expenses);
+  assert.equal(d.counts.stockMovements, movements);
+
+  // The restored sale payload equals the persisted Atlas document.
+  const atlasSale = await Sale.findOne({ businessId: OBJ(a.biz.id), status: "COMPLETED" }).sort({
+    createdAt: 1,
+  });
+  assert.ok(atlasSale);
+  const restoredSale = d.data.sales.find((s: { id: string }) => s.id === String(atlasSale!._id));
+  assert.ok(restoredSale, "the seeded Atlas sale rides in the restore");
+  assert.equal(restoredSale.total, atlasSale!.total);
+  assert.equal(restoredSale.paymentStatus, atlasSale!.paymentStatus);
+
+  // Exactly one RESTORE event per call, persisted in Atlas with device id.
+  const restoreEvents = await SyncEvent.find({
+    businessId: OBJ(a.biz.id),
+    direction: "RESTORE",
+  });
+  assert.ok(restoreEvents.length >= 1);
+  const latest = restoreEvents[restoreEvents.length - 1];
+  assert.ok(latest.deviceId, "RESTORE event carries the JWT device identity");
+  assert.equal(latest.status, "SUCCESS");
+});
+
+test("REAL-ATLAS: cross-tenant restore/export stay 404 against live data", async () => {
+  const restore = await get(`/api/v1/sync/restore?businessId=${a.biz.id}`, b.owner.accessToken);
+  assert.equal(restore.status, 404);
+
+  const status = await get(`/api/v1/backup/status?businessId=${a.biz.id}`, b.owner.accessToken);
+  assert.equal(status.status, 404);
+
+  const json = await get(`/api/v1/export/data?businessId=${a.biz.id}`, b.owner.accessToken);
+  assert.equal(json.status, 404);
+
+  const csv = await get(
+    `/api/v1/export/csv?businessId=${a.biz.id}&type=sales`,
+    b.owner.accessToken
+  );
+  assert.equal(csv.status, 404);
+});
+
+test("REAL-ATLAS: JSON export reconciles with the raw Atlas documents", async () => {
+  const res = await get(`/api/v1/export/data?businessId=${a.biz.id}`, a.owner.accessToken);
+  assert.equal(res.status, 200);
+  const d = res.body.data;
+
+  const entryDocs = await JournalEntry.find({ businessId: OBJ(a.biz.id) });
+  const lineDocs = await JournalLine.find({ entryId: { $in: entryDocs.map((e) => e._id) } });
+
+  assert.equal(d.counts.journalEntries, entryDocs.length);
+  assert.equal(d.counts.journalLines, lineDocs.length);
+
+  // FINANCIAL INVARIANT over the REAL journal: every entry balances.
+  const byEntry = new Map<string, { debit: number; credit: number }>();
+  for (const l of lineDocs) {
+    const agg = byEntry.get(String(l.entryId)) ?? { debit: 0, credit: 0 };
+    agg.debit += l.debit;
+    agg.credit += l.credit;
+    byEntry.set(String(l.entryId), agg);
+  }
+  for (const [, agg] of byEntry) {
+    assert.equal(agg.debit, agg.credit, "real Atlas journal stays balanced");
+  }
+
+  // Exported sale totals == Σ totals across the raw collection.
+  const exportedSum = d.data.sales.reduce((acc: number, s: { total: number }) => acc + Number(s.total), 0);
+  const docs = await Sale.find({ businessId: OBJ(a.biz.id) });
+  assert.equal(exportedSum, docs.reduce((s, x) => s + x.total, 0));
+
+  // DATA_EXPORTED audit row landed in Atlas.
+  const auditRow = await AuditLog.findOne({
+    businessId: OBJ(a.biz.id),
+    action: "DATA_EXPORTED",
+    details: "format=json",
+  }).sort({ createdAt: -1 });
+  assert.ok(auditRow, "export audited in Atlas");
+});
+
+test("REAL-ATLAS: CSV export row count equals the raw Atlas document count", async () => {
+  const res = await get(
+    `/api/v1/export/csv?businessId=${a.biz.id}&type=sales`,
+    a.owner.accessToken
+  );
+  assert.equal(res.status, 200);
+  assert.match(res.headers["content-type"] ?? "", /text\/csv/);
+  const lines = (res.text as string).trim().split(/\r\n/);
+  const atlasCount = await Sale.countDocuments({ businessId: OBJ(a.biz.id) });
+  assert.equal(lines.length - 1, atlasCount, "one CSV row per real Atlas sale");
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// PHASE 12 — chart, notifications, variants, offline stock vs REAL Atlas
+// ══════════════════════════════════════════════════════════════════════════
+
+test("REAL-ATLAS: chart of accounts reads over HTTP on the live connection", async () => {
+  const res = await get(`/api/v1/accounting/chart?businessId=${a.biz.id}`, a.owner.accessToken);
+  assert.equal(res.status, 200);
+  const names = (res.body.data.accounts as Array<{ name: string }>).map((x) => x.name);
+  for (const expected of ["Cash", "Sales Revenue", "Cost of Goods Sold", "Inventory"]) {
+    assert.ok(names.includes(expected), `${expected} in served chart`);
+  }
+});
+
+test("REAL-ATLAS: notification materialization persists deduped rows in Atlas", async () => {
+  // A genuinely low-stocked product in the live tenant.
+  const marker = uid("lowstock");
+  await post("/api/v1/products", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: `Low ${marker}`,
+    unit: "piece",
+    currentStock: 2,
+    minStock: 9,
+  });
+
+  const first = await get(`/api/v1/notifications?businessId=${a.biz.id}`, a.owner.accessToken);
+  assert.equal(first.status, 200);
+  const items = first.body.data.data as Array<{ id: string; type: string; body: string }>;
+  const lowStock = items.filter(
+    (i) => i.type === "LOW_STOCK" && i.body.includes(`Low ${marker}`)
+  );
+  assert.equal(lowStock.length, 1, "exactly one low-stock row for the product");
+
+  const dbRows = await mongoose.connection.db
+    ?.collection("notifications")
+    .countDocuments({ businessId: OBJ(a.biz.id), type: "LOW_STOCK" });
+  assert.ok(dbRows && dbRows >= 1, "rows persisted in Atlas");
+
+  // Re-read: the unique {businessId, dedupKey} index collapses duplicates.
+  const second = await get(`/api/v1/notifications?businessId=${a.biz.id}`, a.owner.accessToken);
+  const again = (second.body.data.data as Array<{ body: string }>).filter((i) =>
+    i.body.includes(`Low ${marker}`)
+  );
+  assert.equal(again.length, 1, "re-evaluation is idempotent");
+});
+
+test("REAL-ATLAS: variant barcode lookup resolves against live documents", async () => {
+  const barcode = `VBARC-${uid("vb")}`;
+  const created = await post("/api/v1/products", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: `VariantProd-${barcode}`,
+    unit: "piece",
+    variants: [{ name: "XL", sku: null, barcode, priceAdjustmentPaisa: 250 }],
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+
+  const lookup = await get(
+    `/api/v1/products/lookup/barcode?businessId=${a.biz.id}&barcode=${encodeURIComponent(barcode)}`,
+    a.owner.accessToken
+  );
+  assert.equal(lookup.status, 200);
+  assert.equal(lookup.body.data.matchedVariant.name, "XL");
+  assert.equal(lookup.body.data.matchedVariant.priceAdjustmentPaisa, 250);
+
+  // Persisted variant lives inside the real Product document.
+  const doc = await Product.findOne({ businessId: OBJ(a.biz.id), "variants.barcode": barcode }).lean();
+  assert.ok(doc, "variant stored in Atlas");
+});
+
+test("REAL-ATLAS: offline inventory_adjust commits once; retry adds nothing", async () => {
+  const product = await post("/api/v1/products", a.owner.accessToken, {
+    businessId: a.biz.id,
+    name: `OfflineAdj-${uid("oa")}`,
+    unit: "piece",
+    currentStock: 15,
+  });
+  const productId = product.body.data.id as string;
+  const beforeStock = (await Product.findById(productId))!.currentStock;
+  const localId = uid("adj");
+
+  const pushBody = {
+    businessId: a.biz.id,
+    shopId: a.shop.id,
+    ops: [
+      {
+        localId,
+        type: "inventory_adjust",
+        payload: { productId, qtyChange: -3, kind: "adjustment", reason: "Atlas damage count" },
+      },
+    ],
+  };
+
+  const first = await post("/api/v1/sync/push", a.owner.accessToken, pushBody);
+  assert.equal(first.body.data.results[0].status, "SYNCED", JSON.stringify(first.body));
+  const afterFirst = (await Product.findById(productId))!.currentStock;
+  assert.equal(afterFirst, beforeStock - 3);
+
+  const movement = await StockMovement.findOne({
+    businessId: OBJ(a.biz.id),
+    refType: "ADJUSTMENT",
+    localId,
+  });
+  assert.ok(movement, "movement persisted with localId in Atlas");
+  assert.equal(movement!.prevStock, beforeStock);
+  assert.equal(movement!.newStock, afterFirst);
+
+  const retry = await post("/api/v1/sync/push", a.owner.accessToken, pushBody);
+  assert.equal(retry.body.data.results[0].duplicate, true);
+  assert.equal(await StockMovement.countDocuments({ businessId: OBJ(a.biz.id), localId }), 1);
+  assert.equal((await Product.findById(productId))!.currentStock, afterFirst);
+
+  // Concurrent pushes of one localId → one movement, one mutation.
+  const concId = uid("adjc");
+  const concBody = {
+    ...pushBody,
+    ops: [
+      {
+        localId: concId,
+        type: "inventory_adjust",
+        payload: { productId, qtyChange: -1, kind: "damage", reason: "concurrent" },
+      },
+    ],
+  };
+  const responses = await Promise.all([
+    post("/api/v1/sync/push", a.owner.accessToken, concBody),
+    post("/api/v1/sync/push", a.owner.accessToken, concBody),
+  ]);
+  for (const r of responses) assert.equal(r.body.data.results[0].status, "SYNCED");
+  assert.equal(
+    await StockMovement.countDocuments({ businessId: OBJ(a.biz.id), localId: concId }),
+    1,
+    "one movement under concurrency"
+  );
+  const afterConcurrent = (await Product.findById(productId))!.currentStock;
+  assert.equal(afterConcurrent, afterFirst - 1);
+});
+
+test("REAL-ATLAS: Excel export row count equals the raw Atlas sale count", async () => {
+  const ExcelJS = (await import("exceljs")).default;
+  const binary = await new Promise<Buffer>((resolve, reject) => {
+    request(app)
+      .get(`/api/v1/export/excel?businessId=${a.biz.id}&type=sales`)
+      .set("Authorization", `Bearer ${a.owner.accessToken}`)
+      .buffer(true)
+      .parse((res2, cb) => {
+        const chunks: Buffer[] = [];
+        res2.on("data", (c: Buffer) => chunks.push(c));
+        res2.on("end", () => cb(undefined, Buffer.concat(chunks)));
+      })
+      .end((err, res2) => {
+        if (err) return reject(err);
+        if (res2.status !== 200) return reject(new Error(`status ${res2.status}`));
+        resolve(res2.body as Buffer);
+      });
+  });
+
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(binary);
+  const sheet = wb.worksheets[0];
+  const atlasSales = await Sale.countDocuments({ businessId: OBJ(a.biz.id) });
+  assert.equal(sheet.rowCount - 1, atlasSales, "workbook rows == Atlas sales documents");
 });

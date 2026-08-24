@@ -7,8 +7,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { Button, Chip, ErrorBanner, FormModal, Input } from "../src/components/ui";
+import { Button, Chip, ErrorBanner, FormModal, InfoBanner, Input } from "../src/components/ui";
 import { ApiError, authRequest } from "../src/api";
+import { authMutation } from "../src/offline/mutate";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
@@ -51,13 +52,14 @@ const METHODS = ["CASH", "BANK", "MOBILE_MONEY", "CARD"] as const;
 
 export function PaymentsScreen() {
   const { t } = useI18n();
-  const { activeBusinessId, activeShopId } = useAuth();
+  const { activeBusinessId, activeShopId, user } = useAuth();
   const [items, setItems] = useState<Payment[]>([]);
   const [customers, setCustomers] = useState<CustomerLite[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierLite[]>([]);
   const [accounts, setAccounts] = useState<AccountLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -150,25 +152,26 @@ export function PaymentsScreen() {
     }
     setSaving(true);
     setError(null);
+    setInfo(null);
     try {
       // idempotencyKey / localId: an offline retry of the SAME payment returns
-      // the original (duplicate:true) instead of moving money twice.
-      await authRequest("/api/v1/payments", {
-        method: "POST",
-        body: {
-          businessId: bizId,
-          shopId,
-          type,
-          customerId: type === "customer_payment" ? partyId : null,
-          supplierId: type === "supplier_payment" ? partyId : null,
-          amount: paisa,
-          method,
-          accountId,
-          note: note.trim() || null,
-          idempotencyKey: newLocalId("pay"),
-          localId: newLocalId("pay"),
-        },
+      // the original (duplicate:true) instead of moving money twice. A network
+      // failure queues the exact payload durably.
+      const payRef = newLocalId("pay");
+      const result = await authMutation(user?.id ?? "", "payment", "/api/v1/payments", {
+        businessId: bizId,
+        shopId,
+        type,
+        customerId: type === "customer_payment" ? partyId : null,
+        supplierId: type === "supplier_payment" ? partyId : null,
+        amount: paisa,
+        method,
+        accountId,
+        note: note.trim() || null,
+        idempotencyKey: payRef,
+        localId: payRef,
       });
+      if (result.queued) setInfo(t("queuedOffline"));
       setModalOpen(false);
       setPartyId("");
       setAmount("");
@@ -187,6 +190,7 @@ export function PaymentsScreen() {
       <View style={styles.toolbar}>
         <Button title={`+ ${t("payments")}`} onPress={openNew} />
       </View>
+      <InfoBanner message={info} />
       <ErrorBanner message={error} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />

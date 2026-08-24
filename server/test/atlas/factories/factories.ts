@@ -31,20 +31,23 @@ export interface AtlasUser {
   accessToken: string;
   refreshToken: string;
   businessId: string | null;
+  /** Phase 09 — the account phone, needed for employee-invite flows. */
+  phone: string;
 }
 
 export async function registerUser(prefix = "user"): Promise<AtlasUser> {
+  const phone = randomPhone();
   const res = await request(app)
     .post("/api/v1/auth/register")
     .send({
       name: "Atlas User",
       email: randomEmail(prefix),
-      phone: randomPhone(),
+      phone,
       password: "password123",
       ...DEV,
     });
   if (res.status !== 201) throw new Error(`register failed: ${res.status} ${JSON.stringify(res.body)}`);
-  return res.body.data as AtlasUser;
+  return { ...(res.body.data as AtlasUser), phone };
 }
 
 export async function createBusiness(token: string): Promise<{ id: string } & Record<string, unknown>> {

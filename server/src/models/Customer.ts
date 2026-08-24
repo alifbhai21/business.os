@@ -13,6 +13,11 @@ export interface CustomerDocument extends Document {
   creditLimit: number; // paisa
   currentDue: number; // paisa — opening balance + sales − payments (maintained by Phase 05+)
   status: CustomerStatus;
+  /**
+   * Phase 10 offline-sync idempotency anchor. Snapshotted from the client's
+   * generated localId so a retried queued create can never duplicate a row.
+   */
+  localId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +34,7 @@ const customerSchema = new Schema<CustomerDocument>(
     creditLimit: { type: Number, default: 0 }, // paisa
     currentDue: { type: Number, default: 0 }, // paisa
     status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "ACTIVE" },
+    localId: { type: String, default: null, trim: true, maxlength: 80 },
   },
   { timestamps: true }
 );
@@ -36,5 +42,10 @@ const customerSchema = new Schema<CustomerDocument>(
 // Customers are always accessed within a business tenant.
 customerSchema.index({ businessId: 1, name: 1 });
 customerSchema.index({ businessId: 1, phone: 1 });
+// Phase 10 offline-sync idempotency: one customer per business-scoped localId.
+customerSchema.index(
+  { businessId: 1, localId: 1 },
+  { unique: true, partialFilterExpression: { localId: { $type: "string" } } }
+);
 
 export const Customer = model<CustomerDocument>("Customer", customerSchema);

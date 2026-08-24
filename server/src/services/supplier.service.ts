@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { Supplier, SupplierDocument, SupplierStatus } from "../models/Supplier";
 import { ApiError } from "../utils/ApiError";
-import { escapeRegExp, membershipFor } from "./membership";
+import { escapeRegExp, isDuplicateKeyError, membershipFor } from "./membership";
 import { buildPagination, parsePagination } from "../utils/pagination";
 
 export interface CreateSupplierInput {
@@ -12,6 +12,8 @@ export interface CreateSupplierInput {
   company?: string | null;
   address?: string | null;
   openingBalance?: number;
+  /** Phase 10 — offline-sync idempotency anchor. */
+  localId?: string | null;
 }
 
 export interface UpdateSupplierInput {
@@ -54,19 +56,42 @@ function roundPaisa(value: number | undefined): number | undefined {
 export async function createSupplier(userId: string, input: CreateSupplierInput) {
   const membership = await membershipFor(userId, input.businessId);
   if (!membership) throw ApiError.notFound("Business not found");
+
+  // Phase 10 offline-sync idempotency: the same localId never duplicates a row.
+  if (input.localId) {
+    const existing = await Supplier.findOne({
+      businessId: new Types.ObjectId(input.businessId),
+      localId: input.localId,
+    });
+    if (existing) return { ...toPublic(existing), duplicate: true };
+  }
+
   const openingBalance = roundPaisa(input.openingBalance) ?? 0;
-  const supplier = await Supplier.create({
-    businessId: new Types.ObjectId(input.businessId),
-    name: input.name,
-    phone: input.phone ?? null,
-    email: input.email ?? null,
-    company: input.company ?? null,
-    address: input.address ?? null,
-    openingBalance,
-    // Seed payable from the migrated opening balance (Phase 05+ updates it on purchases/payments).
-    currentPayable: openingBalance,
-  });
-  return toPublic(supplier);
+  let supplier: SupplierDocument;
+  try {
+    supplier = await Supplier.create({
+      businessId: new Types.ObjectId(input.businessId),
+      name: input.name,
+      phone: input.phone ?? null,
+      email: input.email ?? null,
+      company: input.company ?? null,
+      address: input.address ?? null,
+      openingBalance,
+      // Seed payable from the migrated opening balance (Phase 05+ updates it on purchases/payments).
+      currentPayable: openingBalance,
+      localId: input.localId ?? null,
+    });
+  } catch (err) {
+    if (isDuplicateKeyError(err) && input.localId) {
+      const existing = await Supplier.findOne({
+        businessId: new Types.ObjectId(input.businessId),
+        localId: input.localId,
+      });
+      if (existing) return { ...toPublic(existing), duplicate: true };
+    }
+    throw err;
+  }
+  return { ...toPublic(supplier), duplicate: false };
 }
 
 export async function listSuppliers(userId: string, businessId: string, query: ListSuppliersQuery) {

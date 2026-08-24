@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Button, Chip, ErrorBanner, FormModal, Input } from "../src/components/ui";
+import { Button, Chip, ErrorBanner, FormModal, InfoBanner, Input } from "../src/components/ui";
 import { ApiError, authRequest } from "../src/api";
+import { authMutation } from "../src/offline/mutate";
+import { loadCachedCustomers, loadCachedSuppliers } from "../src/offline/readCache";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
@@ -57,7 +59,7 @@ const EMPTY_FORM: PartyForm = {
 
 export function PartiesScreen() {
   const { t } = useI18n();
-  const { activeBusinessId } = useAuth();
+  const { activeBusinessId, user } = useAuth();
   const [tab, setTab] = useState<Tab>("customers");
   const [items, setItems] = useState<Party[]>([]);
   const [search, setSearch] = useState("");
@@ -65,6 +67,7 @@ export function PartiesScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Party | null>(null);
   const [saving, setSaving] = useState(false);
@@ -93,6 +96,31 @@ export function PartiesScreen() {
         setItems((prev) => (append ? [...prev, ...newItems] : newItems));
         setHasMore(page < pagination.totalPages);
       } catch (e) {
+        // Phase 10 — offline fallback: serve the pulled cache read-only.
+        if (e instanceof ApiError && e.status === 0 && page === 1) {
+          const cached = await (tab === "customers"
+            ? loadCachedCustomers(bizId)
+            : loadCachedSuppliers(bizId));
+          if (cached.length > 0) {
+            setItems(cached.map((c) => ({
+              id: c.id,
+              name: c.name,
+              phone: c.phone ?? null,
+              email: null,
+              address: null,
+              company: null,
+              customerCode: null,
+              openingBalance: 0,
+              creditLimit: 0,
+              currentDue: c.currentDue ?? 0,
+              currentPayable: c.currentPayable ?? 0,
+              status: c.status,
+            })) as Party[]);
+            setHasMore(false);
+            setInfo(t("offlineCacheBanner"));
+            return;
+          }
+        }
         setError(e instanceof Error ? e.message : t("genericError"));
       } finally {
         setLoading(false);
@@ -135,6 +163,7 @@ export function PartiesScreen() {
     }
     setSaving(true);
     setError(null);
+    setInfo(null);
     const body: Record<string, unknown> = {
       businessId: bizId,
       name: form.name.trim(),
@@ -153,7 +182,10 @@ export function PartiesScreen() {
       if (editing) {
         await authRequest(`/api/v1/${path}/${editing.id}`, { method: "PATCH", body });
       } else {
-        await authRequest(`/api/v1/${path}`, { method: "POST", body });
+        // Phase 10 — offline-capable create (customer/supplier): a network
+        // failure queues the identical payload for /sync/push.
+        const result = await authMutation(user?.id ?? "", path === "customers" ? "customer" : "supplier", `/api/v1/${path}`, body);
+        if (result.queued) setInfo(t("queuedOffline"));
       }
       setModalOpen(false);
       setForm(EMPTY_FORM);
@@ -216,6 +248,7 @@ export function PartiesScreen() {
         </View>
       </View>
 
+      <InfoBanner message={info} />
       <ErrorBanner message={error} />
 
       {loading ? (

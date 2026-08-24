@@ -8,8 +8,10 @@ import {
   Text,
   View,
 } from "react-native";
-import { Button, Chip, ErrorBanner, FormModal, Input } from "../src/components/ui";
+import { Button, Chip, ErrorBanner, FormModal, InfoBanner, Input } from "../src/components/ui";
 import { ApiError, authRequest } from "../src/api";
+import { authMutation } from "../src/offline/mutate";
+import { loadCachedProducts } from "../src/offline/readCache";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
@@ -114,7 +116,7 @@ const EMPTY_FORM: ProductForm = {
 
 export function ProductsScreen() {
   const { t, lang } = useI18n();
-  const { activeBusinessId } = useAuth();
+  const { activeBusinessId, user } = useAuth();
   const [mode, setMode] = useState<ViewMode>("products");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -127,6 +129,7 @@ export function ProductsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
@@ -207,6 +210,36 @@ export function ProductsScreen() {
         setProducts((prev) => (append ? [...prev, ...items] : items));
         setHasMore(page < pagination.totalPages);
       } catch (e) {
+        // Phase 10 — offline fallback: serve the pulled cache read-only.
+        if (e instanceof ApiError && e.status === 0 && page === 1) {
+          const cached = await loadCachedProducts(bizId);
+          if (cached.length > 0) {
+            setProducts(cached.map((c) => ({
+              id: c.id,
+              name: c.name,
+              sku: c.sku,
+              barcode: c.barcode,
+              brand: null,
+              categoryId: null,
+              unit: c.unit,
+              purchasePrice: c.purchasePrice,
+              sellingPrice: c.sellingPrice,
+              wholesalePrice: 0,
+              minPrice: 0,
+              taxRate: c.taxRate,
+              currentStock: c.currentStock,
+              minStock: c.minStock,
+              maxStock: 0,
+              preferredSupplierId: null,
+              description: null,
+              imageUrl: null,
+              status: c.status,
+            })));
+            setHasMore(false);
+            setInfo(t("offlineCacheBanner"));
+            return;
+          }
+        }
         setError(e instanceof Error ? e.message : t("genericError"));
       } finally {
         setLoading(false);
@@ -291,7 +324,10 @@ export function ProductsScreen() {
       if (editing) {
         await authRequest(`/api/v1/products/${editing.id}`, { method: "PATCH", body });
       } else {
-        await authRequest("/api/v1/products", { method: "POST", body });
+        // Phase 10 — offline-capable create: network failures queue the
+        // identical payload for /sync/push.
+        const result = await authMutation(user?.id ?? "", "product", "/api/v1/products", body);
+        if (result.queued) setInfo(t("queuedOffline"));
       }
       setModalOpen(false);
       setForm(EMPTY_FORM);
@@ -483,6 +519,7 @@ export function ProductsScreen() {
         </View>
       </View>
 
+      <InfoBanner message={info} />
       <ErrorBanner message={error} />
 
       {loading ? (

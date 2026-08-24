@@ -1,5 +1,4 @@
 import { Schema, model, Document, Types } from "mongoose";
-import { EXPENSE_CATEGORIES, ExpenseCategory } from "../config/accounts";
 
 /**
  * Phase 05.06 — Expense.
@@ -8,11 +7,17 @@ import { EXPENSE_CATEGORIES, ExpenseCategory } from "../config/accounts";
  * paisa (never floating point) and the authoritative balance change lives
  * on the Account document; this record is the source document that the
  * balanced JournalEntry references.
+ *
+ * Phase 12 — `category` is a validated string: the service accepts the
+ * built-in enum UNION the business's custom categories (Business.
+ * customExpenseCategories), so the mongoose-level enum is intentionally
+ * absent. The journal account name derives from the category either way.
  */
 export interface ExpenseDocument extends Document {
   businessId: Types.ObjectId;
   shopId: Types.ObjectId;
-  category: ExpenseCategory;
+  /** Built-in or business-custom category (service-validated). */
+  category: string;
   /** Integer paisa. */
   amount: number;
   paymentAccountId: Types.ObjectId;
@@ -35,7 +40,7 @@ const expenseSchema = new Schema<ExpenseDocument>(
   {
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
     shopId: { type: Schema.Types.ObjectId, ref: "Shop", required: true },
-    category: { type: String, enum: [...EXPENSE_CATEGORIES], required: true },
+    category: { type: String, required: true, trim: true, uppercase: true, maxlength: 30 },
     amount: { type: Number, required: true }, // integer paisa
     paymentAccountId: { type: Schema.Types.ObjectId, ref: "Account", required: true },
     note: { type: String, default: null, trim: true, maxlength: 500 },

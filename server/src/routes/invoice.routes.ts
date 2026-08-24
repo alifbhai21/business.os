@@ -19,5 +19,7 @@ router.use(requireAuth);
 router.get("/sales", resolveBusiness, assertShopAccess, controller.listSaleInvoices);
 router.get("/purchases", resolveBusiness, assertShopAccess, controller.listPurchaseInvoices);
 router.get("/:type/:id", resolveBusiness, assertShopAccess, controller.getInvoice);
+// Phase 12 — print-ready HTML view of the same authoritative invoice.
+router.get("/:type/:id/print", resolveBusiness, assertShopAccess, controller.getInvoicePrint);
 
 export default router;

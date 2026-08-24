@@ -7,8 +7,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { Button, Chip, ErrorBanner, FormModal, Input } from "../src/components/ui";
+import { Button, Chip, ErrorBanner, FormModal, InfoBanner, Input } from "../src/components/ui";
 import { ApiError, authRequest } from "../src/api";
+import { authMutation } from "../src/offline/mutate";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
 import { colors } from "../src/theme";
@@ -38,12 +39,13 @@ const PAGE_SIZE = 50;
 
 export function StockSection() {
   const { t } = useI18n();
-  const { activeBusinessId, activeShopId } = useAuth();
+  const { activeBusinessId, activeShopId, user } = useAuth();
   const [rows, setRows] = useState<StockRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [lowOnly, setLowOnly] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [openingOpen, setOpeningOpen] = useState(false);
@@ -111,18 +113,18 @@ export function StockSection() {
     setSaving("adjust");
     setError(null);
     try {
-      await authRequest("/api/v1/inventory/adjust", {
-        method: "POST",
-        body: {
-          businessId: bizId,
-          shopId,
-          productId: product.id,
-          qtyChange: q,
-          kind: adjKind,
-          reason: adjReason.trim(),
-          localId: newLocalId("adj"),
-        },
+      // Phase 12 — offline-capable: a NETWORK failure queues the exact
+      // payload for /sync/push (exactly-once via the movement localId).
+      const result = await authMutation(user?.id ?? "", "inventory_adjust", "/api/v1/inventory/adjust", {
+        businessId: bizId,
+        shopId,
+        productId: product.id,
+        qtyChange: q,
+        kind: adjKind,
+        reason: adjReason.trim(),
+        localId: newLocalId("adj"),
       });
+      if (result.queued) setInfo(t("queuedOffline"));
       setAdjustOpen(false);
       setAdjProductId("");
       setAdjQty("");
@@ -149,16 +151,14 @@ export function StockSection() {
     setSaving("opening");
     setError(null);
     try {
-      await authRequest("/api/v1/inventory/opening", {
-        method: "POST",
-        body: {
-          businessId: bizId,
-          shopId,
-          productId: product.id,
-          quantity: q,
-          localId: newLocalId("opn"),
-        },
+      const result = await authMutation(user?.id ?? "", "inventory_opening", "/api/v1/inventory/opening", {
+        businessId: bizId,
+        shopId,
+        productId: product.id,
+        quantity: q,
+        localId: newLocalId("opn"),
       });
+      if (result.queued) setInfo(t("queuedOffline"));
       setOpeningOpen(false);
       setOpenProductId("");
       setOpenQty("");
@@ -181,6 +181,7 @@ export function StockSection() {
         <View style={{ width: 8 }} />
         <Button title={`+ ${t("openingStock")}`} onPress={() => setOpeningOpen(true)} />
       </View>
+      <InfoBanner message={info} />
       <ErrorBanner message={error} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />

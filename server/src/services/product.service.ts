@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { Product, ProductDocument, ProductStatus } from "../models/Product";
+import { Product, ProductDocument, ProductStatus, ProductVariant } from "../models/Product";
 import { Category } from "../models/Category";
 import { Supplier } from "../models/Supplier";
 import { ApiError } from "../utils/ApiError";
@@ -25,6 +25,10 @@ export interface CreateProductInput {
   preferredSupplierId?: string | null;
   imageUrl?: string | null;
   description?: string | null;
+  /** Phase 12 — catalog variants (S/M/L…); stock stays product-level. */
+  variants?: ProductVariant[] | null;
+  /** Phase 10 — offline-sync idempotency anchor. */
+  localId?: string | null;
 }
 
 export interface UpdateProductInput {
@@ -45,6 +49,7 @@ export interface UpdateProductInput {
   preferredSupplierId?: string | null;
   imageUrl?: string | null;
   description?: string | null;
+  variants?: ProductVariant[] | null;
 }
 
 export interface ListProductsQuery {
@@ -81,6 +86,12 @@ function toPublic(product: ProductDocument) {
     imageUrl: product.imageUrl,
     description: product.description,
     status: product.status,
+    variants: (product.variants ?? []).map((v) => ({
+      name: v.name,
+      sku: v.sku,
+      barcode: v.barcode,
+      priceAdjustmentPaisa: v.priceAdjustmentPaisa ?? 0,
+    })),
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   };
@@ -88,6 +99,52 @@ function toPublic(product: ProductDocument) {
 
 function roundPaisa(value: number | undefined): number | undefined {
   return value === undefined ? undefined : Math.round(value);
+}
+
+/**
+ * Phase 12 — normalize the submitted variant list: reject case-insensitive
+ * duplicate names within the product and variant barcodes that already exist
+ * anywhere else in the business (variant or product barcodes share one
+ * scanner namespace).
+ */
+async function normalizeVariants(
+  businessId: string,
+  variants?: ProductVariant[] | null
+): Promise<ProductVariant[] | undefined> {
+  if (variants === undefined) return undefined;
+  const normalized = (variants ?? []).map((v) => ({
+    name: v.name.trim(),
+    sku: v.sku?.trim() || null,
+    barcode: v.barcode?.trim() || null,
+    priceAdjustmentPaisa: Math.round(v.priceAdjustmentPaisa ?? 0),
+  }));
+
+  const seen = new Set<string>();
+  for (const v of normalized) {
+    const key = v.name.toLowerCase();
+    if (seen.has(key)) {
+      throw ApiError.conflict(`Duplicate variant name "${v.name}"`);
+    }
+    seen.add(key);
+  }
+
+  const variantBarcodes = normalized.map((v) => v.barcode).filter((b): b is string => Boolean(b));
+  if (variantBarcodes.length > 0) {
+    const clash = await Product.findOne({
+      businessId: new Types.ObjectId(businessId),
+      $or: [
+        { barcode: { $in: variantBarcodes } },
+        { "variants.barcode": { $in: variantBarcodes } },
+      ],
+    })
+      .select("name barcode variants")
+      .lean();
+    if (clash) {
+      throw ApiError.conflict("A variant barcode already exists on another product in this business");
+    }
+  }
+
+  return normalized;
 }
 
 async function assertRefsBelongToBusiness(
@@ -115,11 +172,19 @@ export async function createProduct(userId: string, input: CreateProductInput) {
   const membership = await membershipFor(userId, input.businessId);
   if (!membership) throw ApiError.notFound("Business not found");
   const businessId = new Types.ObjectId(input.businessId);
+
+  // Phase 10 offline-sync idempotency: the same localId never duplicates a row.
+  if (input.localId) {
+    const existing = await Product.findOne({ businessId, localId: input.localId });
+    if (existing) return { ...toPublic(existing), duplicate: true };
+  }
+
   await assertRefsBelongToBusiness(
     businessId,
     input.categoryId ?? null,
     input.preferredSupplierId ?? null
   );
+  const variants = await normalizeVariants(input.businessId, input.variants);
 
   const purchasePrice = roundPaisa(input.purchasePrice) ?? 0;
   let product: ProductDocument;
@@ -146,14 +211,21 @@ export async function createProduct(userId: string, input: CreateProductInput) {
         : null,
       imageUrl: input.imageUrl ?? null,
       description: input.description ?? null,
+      variants: variants ?? [],
+      localId: input.localId ?? null,
     });
   } catch (err) {
     if (isDuplicateKeyError(err)) {
+      // A queued retry may have lost the race on the localId index.
+      if (input.localId) {
+        const existing = await Product.findOne({ businessId, localId: input.localId });
+        if (existing) return { ...toPublic(existing), duplicate: true };
+      }
       throw ApiError.conflict("A product with this barcode already exists in this business");
     }
     throw err;
   }
-  return toPublic(product);
+  return { ...toPublic(product), duplicate: false };
 }
 
 export async function listProducts(userId: string, businessId: string, query: ListProductsQuery) {
@@ -199,16 +271,38 @@ export async function getProduct(userId: string, businessId: string, productId: 
   return toPublic(product);
 }
 
-/** Barcode lookup — exact match, business-scoped. Returns the product or 404. */
+/**
+ * Barcode lookup — exact match, business-scoped, covering BOTH product
+ * barcodes and Phase 12 variant barcodes. The scanner only ever IDENTIFIES a
+ * product: tenant scoping (membership), shop rules and RBAC stay exactly as
+ * for any other product read. A matched variant rides along as
+ * `matchedVariant` (top-level product shape preserved for existing clients).
+ */
 export async function getProductByBarcode(userId: string, businessId: string, barcode: string) {
   const membership = await membershipFor(userId, businessId);
   if (!membership) throw ApiError.notFound("Business not found");
-  const product = await Product.findOne({
-    businessId: new Types.ObjectId(businessId),
-    barcode,
-  });
+  const product =
+    (await Product.findOne({
+      businessId: new Types.ObjectId(businessId),
+      barcode,
+    })) ??
+    (await Product.findOne({
+      businessId: new Types.ObjectId(businessId),
+      "variants.barcode": barcode,
+    }));
   if (!product) throw ApiError.notFound("Product not found");
-  return toPublic(product);
+  const matchedVariant =
+    product.variants?.find((v) => v.barcode && v.barcode === barcode) ?? null;
+  return {
+    ...toPublic(product),
+    matchedVariant: matchedVariant
+      ? {
+          name: matchedVariant.name,
+          sku: matchedVariant.sku,
+          priceAdjustmentPaisa: matchedVariant.priceAdjustmentPaisa,
+        }
+      : null,
+  };
 }
 
 export async function updateProduct(
@@ -233,6 +327,7 @@ export async function updateProduct(
     input.categoryId,
     input.preferredSupplierId
   );
+  const variants = await normalizeVariants(businessId, input.variants);
 
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name;
@@ -261,6 +356,7 @@ export async function updateProduct(
       : null;
   if (input.imageUrl !== undefined) patch.imageUrl = input.imageUrl;
   if (input.description !== undefined) patch.description = input.description;
+  if (variants !== undefined) patch.variants = variants;
 
   Object.assign(product, patch);
   try {

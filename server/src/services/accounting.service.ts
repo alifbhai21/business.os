@@ -1,7 +1,12 @@
 import { Types, PipelineStage } from "mongoose";
 import { JournalEntry } from "../models/JournalEntry";
 import { JournalLine } from "../models/JournalLine";
-import { JOURNAL_ACCOUNTS } from "../config/accounts";
+import {
+  JOURNAL_ACCOUNTS,
+  JOURNAL_ACCOUNT_TYPES,
+  EXPENSE_CATEGORIES,
+  expenseAccountName,
+} from "../config/accounts";
 import { membershipFor } from "./membership";
 import { parsePagination, buildPagination } from "../utils/pagination";
 import { ApiError } from "../utils/ApiError";
@@ -66,7 +71,8 @@ async function resolveScope(
   if (typeof query.to === "string" && query.to) {
     const d = new Date(query.to);
     if (Number.isNaN(d.getTime())) throw ApiError.badRequest("Invalid to date");
-    if (/^\d{4}-\d{2}-\d{2}$/.test(query.to)) d.setHours(23, 59, 59, 999);
+    // Bare YYYY-MM-DD = whole UTC day (matches the report read layer).
+    if (/^\d{4}-\d{2}-\d{2}$/.test(query.to)) d.setTime(d.getTime() + 86_400_000 - 1);
     range.$lte = d;
   }
   if (Object.keys(range).length) entryFilter.date = range;
@@ -126,6 +132,49 @@ async function accountTotals(entryFilter: Record<string, unknown>) {
 }
 
 // ── Journal listing ────────────────────────────────────────────────────────
+
+/**
+ * Phase 12 — chart of accounts (read-only projection of the canonical
+ * config). No AccountChart collection exists by design: the chart is
+ * server-authoritative configuration, so the API SERVES it verbatim and the
+ * UI renders it — one source of truth, zero drift between engine and UI.
+ */
+export async function chartOfAccounts(userId: string, businessId: string) {
+  const membership = await membershipFor(userId, businessId);
+  if (!membership) throw ApiError.notFound("Business not found");
+
+  const accounts: Array<{ name: string; accountType: string; normalBalance: string }> = Object.values(
+    JOURNAL_ACCOUNTS
+  ).map((name) => {
+    const accountType = JOURNAL_ACCOUNT_TYPES[name];
+    return {
+      name,
+      accountType,
+      normalBalance: accountType === "ASSET" || accountType === "EXPENSE" ? "DEBIT" : "CREDIT",
+    };
+  });
+
+  // EQUITY is listed for completeness (retained earnings is the balance
+  // sheet's balancing figure) even though no journal writes to it directly.
+  const byType = (t: string) => accounts.filter((a) => a.accountType === t);
+  const grouped = {
+    ASSET: byType("ASSET"),
+    LIABILITY: byType("LIABILITY"),
+    EQUITY: byType("EQUITY"),
+    REVENUE: byType("REVENUE"),
+    EXPENSE: byType("EXPENSE"),
+  };
+
+  return {
+    source: "config",
+    accounts,
+    grouped,
+    expenseCategories: EXPENSE_CATEGORIES.map((c) => ({
+      category: c,
+      accountName: expenseAccountName(c),
+    })),
+  };
+}
 
 export async function listJournal(
   userId: string,

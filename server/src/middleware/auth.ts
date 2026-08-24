@@ -29,15 +29,24 @@ declare global {
 /**
  * Require a valid Bearer access token.
  * Sets req.user from verified JWT claims (never trusts client-provided user fields).
+ *
+ * Phase 12: for printable/exportable documents the token may alternatively
+ * arrive as `?access_token=` (a browser cannot set Authorization headers when
+ * opening a print view). Header form takes precedence; both are fully
+ * verified identically.
  */
 export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
   try {
     const header = req.headers.authorization;
-    if (!header || !header.startsWith("Bearer ")) {
+    const queryToken =
+      typeof (req.query as Record<string, unknown>).access_token === "string"
+        ? ((req.query as Record<string, unknown>).access_token as string)
+        : null;
+    const raw = header && header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : queryToken;
+    if (!raw) {
       throw ApiError.unauthorized("Authentication required");
     }
-    const token = header.slice("Bearer ".length).trim();
-    const claims = verifyAccessToken(token);
+    const claims = verifyAccessToken(raw);
     if (!claims.userId) {
       throw ApiError.unauthorized("Invalid token");
     }

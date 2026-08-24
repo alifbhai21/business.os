@@ -31,6 +31,8 @@ export interface SaleItem {
    * drive the cumulative returned quantity above the original `qty`.
    */
   returnedQty: number;
+  /** Phase 12 — snapshot of the chosen Product variant (labelling only). */
+  variantName: string | null;
 }
 
 export interface SaleDocument extends Document {
@@ -80,6 +82,7 @@ const saleItemSchema = new Schema<SaleItem>(
     taxAmount: { type: Number, default: 0 }, // integer paisa
     lineTotal: { type: Number, required: true }, // integer paisa
     returnedQty: { type: Number, default: 0 },
+  variantName: { type: String, default: null, trim: true, maxlength: 40 },
   },
   { _id: false }
 );

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
-import { Button, Chip, ErrorBanner, FormModal, Input } from "../src/components/ui";
+import { Button, Chip, ErrorBanner, FormModal, InfoBanner, Input } from "../src/components/ui";
+import { authMutation } from "../src/offline/mutate";
 import { ApiError, authRequest } from "../src/api";
 import { useAuth } from "../src/auth";
 import { useI18n } from "../src/i18n";
@@ -48,11 +49,12 @@ const catKey: Record<string, string> = {
 
 export function ExpensesScreen() {
   const { t } = useI18n();
-  const { activeBusinessId, activeShopId } = useAuth();
+  const { activeBusinessId, activeShopId, user, business } = useAuth();
   const [items, setItems] = useState<Expense[]>([]);
   const [accounts, setAccounts] = useState<AccountLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [category, setCategory] = useState<string>("RENT");
@@ -62,6 +64,11 @@ export function ExpensesScreen() {
 
   const bizId = activeBusinessId ?? "";
   const shopId = activeShopId ?? "";
+
+  // Phase 12 — business-defined categories merge with the built-in list.
+  // Custom names have no bn dictionary entry; they are shown lowercased.
+  const customCategories = business?.customExpenseCategories ?? [];
+  const allCategories: string[] = [...CATEGORIES, ...customCategories];
 
   const loadAccounts = useCallback(async () => {
     if (!bizId || !shopId) {
@@ -115,22 +122,21 @@ export function ExpensesScreen() {
     }
     setSaving(true);
     setError(null);
+    setInfo(null);
     try {
       // localId makes an offline retry of the SAME logical expense idempotent —
       // the server returns the original expense (duplicate: true) instead of
-      // deducting the account twice.
-      await authRequest("/api/v1/expenses", {
-        method: "POST",
-        body: {
-          businessId: bizId,
-          shopId,
-          category,
-          amount: paisa,
-          paymentAccountId: accountId,
-          note: note.trim() || null,
-          localId: newLocalId("exp"),
-        },
+      // deducting the account twice. A network failure queues it durably.
+      const result = await authMutation(user?.id ?? "", "expense", "/api/v1/expenses", {
+        businessId: bizId,
+        shopId,
+        category,
+        amount: paisa,
+        paymentAccountId: accountId,
+        note: note.trim() || null,
+        localId: newLocalId("exp"),
       });
+      if (result.queued) setInfo(t("queuedOffline"));
       setModalOpen(false);
       setAmount("");
       setNote("");
@@ -148,6 +154,7 @@ export function ExpensesScreen() {
       <View style={styles.toolbar}>
         <Button title={`+ ${t("addExpense")}`} onPress={() => setModalOpen(true)} />
       </View>
+      <InfoBanner message={info} />
       <ErrorBanner message={error} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
@@ -172,9 +179,14 @@ export function ExpensesScreen() {
         <ErrorBanner message={error} />
         <Text style={styles.fieldLabel}>{t("expenseCategory")}</Text>
         <View style={styles.chipWrap}>
-          {CATEGORIES.map((c) => (
-            <Chip key={c} label={t(catKey[c])} active={category === c} onPress={() => setCategory(c)} />
-          ))}
+            {allCategories.map((c) => (
+              <Chip
+                key={c}
+                label={catKey[c] ? t(catKey[c]) : c.toLowerCase()}
+                active={category === c}
+                onPress={() => setCategory(c)}
+              />
+            ))}
         </View>
         <View style={{ height: 8 }} />
         <Input value={amount} onChangeText={setAmount} placeholder={t("amount")} keyboardType="decimal-pad" />
