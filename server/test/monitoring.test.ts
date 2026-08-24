@@ -26,14 +26,16 @@ after(async () => {
 // ---------------------------------------------------------------------------
 
 test("redaction: MongoDB credentials never survive logging", () => {
-  const out = redactText("connected mongodb+srv://rakin:hunter2@cluster0.x.mongodb.net/business_os");
+  const out = redactText(
+    "connected mongodb+srv://rakin:hunter2@cluster0.x.mongodb.net/business_os (test fixture)"
+  );
   assert.ok(!out.includes("hunter2"));
   assert.ok(!out.includes("rakin:"));
   assert.match(out, /mongodb\+srv:\/\/\*\*\*:\*\*\*@/);
 });
 
 test("redaction: postgres URIs are masked the same way", () => {
-  const out = redactText("postgresql://admin:s3cret@127.0.0.1:5432/app_db");
+  const out = redactText("postgresql://admin:s3cret@127.0.0.1:5432/app_db (test fixture)");
   assert.ok(!out.includes("s3cret"));
   assert.ok(out.includes("postgresql://***:***@127.0.0.1:5432/app_db"));
 });

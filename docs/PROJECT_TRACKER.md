@@ -40,8 +40,7 @@
 - [x] Phase 12 — Enhancements — IMPLEMENTATION COMPLETE (VERIFIED 2026-08-24; 600/600 TESTS + 39/39 REAL-ATLAS; FCM push BLOCKED on Firebase credentials, jobs module deferred)
 - [ ] Phase 13 — Testing, CI/CD & Deployment — IMPLEMENTATION COMPLETE (638/638 TESTS + 39/39 REAL-ATLAS; CI/CD + security lane + deployment scaffolding shipped; actual staging/production deploys BLOCKED on external accounts)
 - [ ] Phase 14 — Production Hardening & Monitoring — IMPLEMENTATION COMPLETE (660/660 TESTS + 2/2 PERF LANE + 39/39 REAL-ATLAS; structured logging, latency metrics, sync KPI, Sentry wiring, compression; production activation BLOCKED on deploy+DSN)
-- [ ] Phase 14 — Production Hardening & Monitoring
-- [ ] Phase 15 — Future
+- [ ] Phase 15 — Future Modules — EVALUATION & PRIORITIZATION COMPLETE (docs/FUTURE_MODULES_EVALUATION.md; 10 modules tiered with codebase-grounded fit audit + Bangladesh validation questions; builds BLOCKED by design on owner market validation per PRD §16.3)
 
 ---
 
@@ -1116,13 +1115,36 @@
 
 ## Phase 15 — Future
 
-- [ ] AI Business Assistant (Bangla)
-- [ ] Due reminders (WhatsApp/SMS with authorization)
-- [ ] Google Sheets integration
-- [ ] Accounting period locking (fiscal year close)
-- [ ] Payroll (salary, attendance, commission)
-- [ ] SaaS subscriptions + billing
-- [ ] FIFO/batch costing
-- [ ] iOS app
-- [ ] Barcode label printing
-- [ ] Service business jobs module
+> **Phase 15 EVALUATION COMPLETE (2026-08-24):** Recovery audit confirmed
+> zero prior implementation and a clean committed tree. Per PRD §16.3 these
+> modules are explicitly OUT of MVP and the phase gate requires market
+> validation BEFORE build — so the deliverable is the evaluation document,
+> not speculative code. Produced docs/FUTURE_MODULES_EVALUATION.md:
+> architecture-grounded fit audit (reusing journal engine, transaction/
+> idempotency pattern, notification evaluator, export path, transfer state
+> machine, Employee/Business anchors), effort sizing, risk notes, Bangla-
+> market validation questions, and tiered sequencing: Tier 1 = due
+> reminders → Sheets/CSV import → period locking; Tier 2 = AI assistant →
+> barcode labels → service jobs; Tier 3 = payroll → iOS; Tier 4 =
+> SaaS billing (traction-gated) · FIFO (vertical-gated). Also fixed the
+> secret-scanner false-positive contract for intentional test fixtures
+> (scan now clean across 432 tracked files). Final gates all green.
+
+- [x] Each future module evaluated with codebase-grounded fit, effort, risk + validation questions
+- [x] Modules prioritized into build tiers with explicit gates
+- [ ] Build any module — BLOCKED BY DESIGN on owner's Bangladesh-market validation (PRD §18 Stage 1–2)
+
+### Module disposition
+
+| Module | Tier | Key anchor in codebase |
+|---|---|---|
+| Due reminders (WhatsApp/share) | 1 | notification evaluator + wa.me deep links |
+| Google Sheets / CSV import | 1 | export path inverse + strict Zod rows + localId |
+| Accounting periods (lock/close) | 1 | Business.fiscalYear + journal engine guard |
+| AI Business Assistant (Bangla) | 2 | existing report aggregations as grounded answers |
+| Barcode label printing | 2 | escaped-HTML print precedent |
+| Service jobs module | 2 | StockTransfer state-machine precedent |
+| Payroll | 3 | Employee model (+ attribution gap documented) |
+| iOS app | 3 | same Expo codebase · Apple account external |
+| SaaS subscriptions/billing | 4 | plan-limit middleware slot · traction-gated |
+| FIFO/batch costing | 4 | opt-in cost-layer ledger · XL regression risk |

@@ -19,7 +19,7 @@ function prodEnv(over: Partial<Env> = {}): Env {
   return {
     NODE_ENV: "production",
     PORT: 4000,
-    DATABASE_URL: "mongodb+srv://prod-user:secret@cluster.mongodb.net/business-os",
+    DATABASE_URL: "mongodb+srv://prod-user:fixture-password@cluster.example.com/business-os",
     JWT_ACCESS_SECRET: "x".repeat(32),
     JWT_REFRESH_SECRET: "y".repeat(32),
     JWT_ACCESS_EXPIRES_IN: "15m",
@@ -44,7 +44,7 @@ test("env gate: missing MongoDB URI in production is rejected", () => {
 
 test("env gate: MONGODB_URI alone satisfies the database requirement", () => {
   const issues = productionEnvIssues(
-    prodEnv({ DATABASE_URL: undefined, MONGODB_URI: "mongodb+srv://u:s@c.mongodb.net/business-os" })
+    prodEnv({ DATABASE_URL: undefined, MONGODB_URI: "mongodb+srv://u:s@c.example.com/business-os" })
   );
   assert.deepEqual(issues, []);
 });

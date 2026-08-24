@@ -58,10 +58,18 @@ const RULES = [
  * Placeholder markers. A line containing any of these is treated as
  * documentation/template rather than a live credential.
  */
+/**
+ * Placeholder markers. A line containing any of these is treated as
+ * documentation/template rather than a live credential.
+ *
+ * Contract: any test fixture or doc sample that deliberately embeds a
+ * REALISTIC-LOOKING credential (e.g. to prove log redaction works) MUST
+ * carry one of these markers on the same line. Real secrets never do.
+ */
 const PLACEHOLDER_MARKERS = [
   "<user>", "<password>", "<password>", "username:password", "user:pass",
   "***:***", "your-", "changeme", "change-me", "example.com", "example.org",
-  "xxxxxx", "****", "REDACTED", "placeholder",
+  "xxxxxx", "****", "REDACTED", "placeholder", "fixture", "not-real",
 ];
 
 function isPlaceholderLine(line) {
