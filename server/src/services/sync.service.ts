@@ -431,3 +431,117 @@ export async function pullDelta(
     suppliers: suppliers.map(supplierToPull),
   };
 }
+
+/**
+ * Phase 14 — sync success-rate KPI (PRD monitoring requirement).
+ *
+ * Aggregates the Phase 10 SyncEvent ledger into a windowed KPI: per
+ * direction (PUSH/PULL/RESTORE) event counts by status plus the op-level
+ * success ratio for mutations (ok / (ok + conflict + failed)). The window
+ * is bounded and the aggregation runs on the indexed {businessId,
+ * createdAt:-1} path, so it never scans beyond one business's events.
+ *
+ * Business-scoped: membership is re-checked here (defense in depth) — an
+ * outsider gets a plain 404 with no existence leakage.
+ */
+export async function syncStats(
+  userId: string,
+  businessId: string,
+  since?: string | undefined
+) {
+  const membership = await membershipFor(userId, businessId);
+  if (!membership) throw ApiError.notFound("Business not found");
+
+  const parsedSince = since ? new Date(since) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  if (Number.isNaN(parsedSince.getTime())) {
+    throw ApiError.badRequest("since must be a valid ISO 8601 date-time");
+  }
+
+  const rows = await SyncEvent.aggregate<{
+    _id: "PUSH" | "PULL" | "RESTORE";
+    events: number;
+    success: number;
+    partial: number;
+    failed: number;
+    opCount: number;
+    okCount: number;
+    failedCount: number;
+    conflictCount: number;
+  }>([
+    {
+      $match: {
+        businessId: new Types.ObjectId(businessId),
+        createdAt: { $gte: parsedSince },
+      },
+    },
+    {
+      $group: {
+        _id: "$direction",
+        events: { $sum: 1 },
+        success: { $sum: { $cond: [{ $eq: ["$status", "SUCCESS"] }, 1, 0] } },
+        partial: { $sum: { $cond: [{ $eq: ["$status", "PARTIAL"] }, 1, 0] } },
+        failed: { $sum: { $cond: [{ $eq: ["$status", "FAILED"] }, 1, 0] } },
+        opCount: { $sum: "$opCount" },
+        okCount: { $sum: "$okCount" },
+        failedCount: { $sum: "$failedCount" },
+        conflictCount: { $sum: "$conflictCount" },
+      },
+    },
+  ]);
+
+  const directions = (["PUSH", "PULL", "RESTORE"] as const).map((direction) => {
+    const row = rows.find((r) => r._id === direction);
+    const attempted = row ? row.okCount + row.failedCount + row.conflictCount : 0;
+    return {
+      direction,
+      events: row?.events ?? 0,
+      success: row?.success ?? 0,
+      partial: row?.partial ?? 0,
+      failed: row?.failed ?? 0,
+      ops: {
+        attempted,
+        ok: row?.okCount ?? 0,
+        conflicts: row?.conflictCount ?? 0,
+        failed: row?.failedCount ?? 0,
+        // Op-level exactly-once success ratio over MUTATION outcomes.
+        successRate:
+          attempted > 0 ? Math.round((row!.okCount / attempted) * 10000) / 100 : null,
+      },
+    };
+  });
+
+  const recentFailures = await SyncEvent.find({
+    businessId: new Types.ObjectId(businessId),
+    status: { $in: ["FAILED", "PARTIAL"] },
+    createdAt: { $gte: parsedSince },
+  })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .select("direction status error createdAt")
+    .lean();
+
+  const totals = rows.reduce(
+    (acc, r) => ({
+      events: acc.events + r.events,
+      okOps: acc.okOps + r.okCount,
+      badOps: acc.badOps + r.failedCount + r.conflictCount,
+    }),
+    { events: 0, okOps: 0, badOps: 0 }
+  );
+
+  return {
+    since: parsedSince.toISOString(),
+    overallSuccessRate:
+      totals.okOps + totals.badOps > 0
+        ? Math.round((totals.okOps / (totals.okOps + totals.badOps)) * 10000) / 100
+        : null,
+    totals,
+    directions,
+    recentFailures: recentFailures.map((f) => ({
+      at: f.createdAt,
+      direction: f.direction,
+      status: f.status,
+      error: f.error ?? null,
+    })),
+  };
+}

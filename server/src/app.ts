@@ -3,10 +3,13 @@ import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
+import compression from "compression";
 import mongoose from "mongoose";
 import { loadEnv } from "./config/env";
 import { ApiError } from "./utils/ApiError";
 import { logger } from "./utils/logger";
+import { httpsRedirect } from "./middleware/https";
+import { latencyTracker } from "./middleware/metrics";
 import authRoutes from "./routes/auth.routes";
 import businessRoutes from "./routes/business.routes";
 import shopRoutes from "./routes/shop.routes";
@@ -35,13 +38,26 @@ import syncRoutes from "./routes/sync.routes";
 import backupRoutes from "./routes/backup.routes";
 import exportRoutes from "./routes/export.routes";
 import notificationRoutes from "./routes/notification.routes";
+import opsRoutes from "./routes/ops.routes";
 
 const env = loadEnv();
 
 const app = express();
 
+// Behind Render's TLS-terminating proxy we must trust X-Forwarded-* headers
+// (rate limiter client IPs and the HTTPS redirect both depend on it).
+if (env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+  app.use(httpsRedirect);
+}
+
 // --- Middleware stack (per PRD Appendix A) ---
 app.use(helmet());
+
+// Phase 14 — gzip responses (PRD: low mobile-data usage). JSON reports and
+// delta-sync payloads compress heavily; the client fetch layer decompresses
+// transparently.
+app.use(compression());
 
 app.use(
   cors({
@@ -61,6 +77,10 @@ const globalLimiter = rateLimit({
   skip: (req) => req.path === "/health" || req.path === "/ready",
 });
 app.use(globalLimiter);
+
+// Phase 14 — API latency monitoring (p50/p95/p99 per route key). Mounted
+// before all routes; /health and /ready are exempt inside the tracker.
+app.use(latencyTracker);
 
 // --- Health & readiness ---
 app.get("/health", (_req: Request, res: Response) => {
@@ -111,6 +131,8 @@ app.use("/api/v1/backup", backupRoutes);
 app.use("/api/v1/export", exportRoutes);
 // Phase 12 — in-app notifications (low stock / dues / sync failures).
 app.use("/api/v1/notifications", notificationRoutes);
+// Phase 14 — operations monitoring (process health + latency percentiles).
+app.use("/api/v1/ops", opsRoutes);
 
 // --- 404 ---
 app.use((_req: Request, _res: Response, next: NextFunction) => {

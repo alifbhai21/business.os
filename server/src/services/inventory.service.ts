@@ -1,7 +1,6 @@
 import { Types, ClientSession } from "mongoose";
 import { Product } from "../models/Product";
 import { StockMovement } from "../models/StockMovement";
-import { Shop } from "../models/Shop";
 import { AuditLog } from "../models/AuditLog";
 import { membershipFor, isDuplicateKeyError } from "./membership";
 import { withTransaction } from "../db/transactions";
@@ -321,13 +320,13 @@ export async function listStock(
   shopId: string | null | undefined,
   query: ListStockQuery = {}
 ) {
-  let effectiveShopId: string | null = shopId ?? null;
   if (shopId) {
     await assertAccess(userId, businessId, shopId);
   } else {
     const membership = await membershipFor(userId, businessId);
     if (!membership) throw ApiError.notFound("Business not found");
-    if (membership.shopId) effectiveShopId = String(membership.shopId);
+    // Products are BUSINESS-scoped (Phase 04), so no shop pinning applies
+    // here — every ACTIVE member may read the catalog of their business.
   }
 
   const filter: Record<string, unknown> = { businessId: new Types.ObjectId(businessId) };

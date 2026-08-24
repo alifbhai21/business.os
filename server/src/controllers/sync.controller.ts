@@ -27,3 +27,16 @@ export const syncPull = asyncHandler(async (req: Request, res: Response) => {
   });
   return sendSuccess(res, data);
 });
+
+/** Phase 14 — sync success-rate KPI over a bounded window. */
+export const syncStats = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) throw ApiError.unauthorized();
+  const businessId = req.query.businessId as string;
+  if (!businessId) throw ApiError.badRequest("businessId query param is required");
+  const data = await syncService.syncStats(
+    req.user.id,
+    businessId,
+    req.query.since as string | undefined
+  );
+  return sendSuccess(res, data);
+});

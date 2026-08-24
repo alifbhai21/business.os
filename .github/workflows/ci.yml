@@ -1,0 +1,129 @@
+name: CI
+
+# Phase 13 — every PR runs: install → typecheck → lint → test → audit,
+# plus the real-Atlas integration lane, the mobile TypeScript check and a
+# secret scan. A red gate blocks merge; nothing is silently skipped.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  backend:
+    name: Backend — typecheck · lint · tests · audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      # Performance gates need a quiet machine — run sequentially AFTER the
+      # parallel unit/integration suite has fully finished (p95 < 500ms).
+      - name: Performance budgets
+        run: npm run test:perf
+
+      - name: Dependency audit (fail on high/critical)
+        run: npm audit --audit-level=high
+
+  atlas:
+    name: Real Atlas integration (business_os_api_test)
+    runs-on: ubuntu-latest
+    needs: [backend]
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
+      # Safety: the harness refuses to run without an Atlas URI, and this
+      # job must FAIL CLEARLY rather than silently skip when the secret is
+      # not configured on the repository.
+      - name: Require Atlas credentials
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: |
+          if [ -z "$MONGODB_URI" ]; then
+            echo "::error::MONGODB_URI secret is NOT configured on this repository."
+            echo "::error::Add it under Settings → Secrets and variables → Actions."
+            echo "::error::The real-Atlas lane cannot be silently skipped."
+            exit 1
+          fi
+
+      # The harness derives the dedicated business_os_api_test database from
+      # the URI, aborts unless connected to exactly that database, performs
+      # no destructive operations, and only ever logs MASKED connection info.
+      - name: Real-Atlas integration tests
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: npm run test:atlas
+
+  mobile:
+    name: Mobile — TypeScript check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  security-scan:
+    name: Security — secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Secret scan (zero-dependency)
+        run: node scripts/security-scan.mjs

@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-const optionalText = z.string().max(255).optional().nullable();
 const optionalLongText = z.string().max(2000).optional().nullable();
 const optionalId = z.string().max(64).optional().nullable();
 

@@ -1,11 +1,11 @@
-import { Types, ClientSession } from "mongoose";
+import { Types } from "mongoose";
 import { StockTransfer, StockTransferDocument, STOCK_TRANSFER_STATUSES } from "../models/StockTransfer";
 import { StockMovement } from "../models/StockMovement";
 import { Product } from "../models/Product";
 import { Shop } from "../models/Shop";
 import { Business } from "../models/Business";
 import { AuditLog } from "../models/AuditLog";
-import { membershipFor, isDuplicateKeyError } from "./membership";
+import { membershipFor } from "./membership";
 import { withTransaction } from "../db/transactions";
 import { assertSafePaisa } from "../utils/money";
 import { parsePagination, buildPagination } from "../utils/pagination";

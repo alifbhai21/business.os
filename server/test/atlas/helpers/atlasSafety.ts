@@ -52,7 +52,7 @@ export function deriveTestUri(baseUri: string, dbName: string): string {
   const schemeSep = base.indexOf("://");
   if (schemeSep === -1) throw new Error("MongoDB URI has no :// scheme separator");
   const authStart = schemeSep + 3;
-  let pathStart = base.indexOf("/", authStart);
+  const pathStart = base.indexOf("/", authStart);
   let authority = base;
   let dbPath = "";
   if (pathStart !== -1) {

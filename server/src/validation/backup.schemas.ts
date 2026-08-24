@@ -10,8 +10,6 @@ import { z } from "zod";
  * service level.
  */
 
-const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid MongoDB ObjectId");
-
 /** GET /api/v1/sync/restore — full dataset pull for a (new) device. */
 export const restoreQuerySchema = z.object({
   businessId: z.string().min(1, "businessId is required"),

@@ -4,7 +4,7 @@ import { app } from "../../../src/app";
 import { BusinessMembership, ROLES } from "../../../src/models/BusinessMembership";
 
 /** Unique run prefix so concurrent/atlas data never collides across runs. */
-let runId = Math.random().toString(36).slice(2, 10);
+const runId = Math.random().toString(36).slice(2, 10);
 
 export function uid(prefix: string): string {
   return `${prefix}-${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

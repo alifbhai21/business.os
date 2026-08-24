@@ -42,7 +42,7 @@ export const exportCsv = asyncHandler(async (req: Request, res: Response) => {
   const type = req.query.type as ExportCsvType;
   if (!businessId) throw ApiError.badRequest("businessId query param is required");
   if (!type) throw ApiError.badRequest("type query param is required");
-  const { csv, rowCount } = await backupService.exportCsv(req.user.id, {
+  const { csv } = await backupService.exportCsv(req.user.id, {
     businessId,
     type,
     limit: req.query.limit ? Number(req.query.limit) : undefined,
@@ -58,7 +58,7 @@ export const exportExcel = asyncHandler(async (req: Request, res: Response) => {
   const type = req.query.type as ExportCsvType;
   if (!businessId) throw ApiError.badRequest("businessId query param is required");
   if (!type) throw ApiError.badRequest("type query param is required");
-  const { workbook, rowCount } = await backupService.exportExcel(req.user.id, {
+  const { workbook } = await backupService.exportExcel(req.user.id, {
     businessId,
     type,
     limit: req.query.limit ? Number(req.query.limit) : undefined,

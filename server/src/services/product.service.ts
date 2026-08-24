@@ -233,8 +233,11 @@ export async function listProducts(userId: string, businessId: string, query: Li
   if (!membership) throw ApiError.notFound("Business not found");
 
   const filter: Record<string, unknown> = { businessId: new Types.ObjectId(businessId) };
-  if (query.search) {
-    const rx = new RegExp(escapeRegExp(query.search), "i");
+  // mongoSanitize strips $-keys but can still leave a non-string (e.g. an
+  // empty object from `?search[$ne]=`). Only a real string is searchable.
+  const searchTerm = typeof query.search === "string" ? query.search : "";
+  if (searchTerm) {
+    const rx = new RegExp(escapeRegExp(searchTerm), "i");
     filter.$or = [{ name: rx }, { sku: rx }, { barcode: rx }, { brand: rx }];
   }
   if (query.categoryId) {
@@ -263,6 +266,9 @@ export async function listProducts(userId: string, businessId: string, query: Li
 export async function getProduct(userId: string, businessId: string, productId: string) {
   const membership = await membershipFor(userId, businessId);
   if (!membership) throw ApiError.notFound("Business not found");
+  // Malformed ids must read as "absent" (404), not surface as a CastError 500
+  // — same contract as getPurchase in purchase.service.ts.
+  if (!Types.ObjectId.isValid(productId)) throw ApiError.notFound("Product not found");
   const product = await Product.findOne({
     _id: new Types.ObjectId(productId),
     businessId: new Types.ObjectId(businessId),

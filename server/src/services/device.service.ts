@@ -1,7 +1,6 @@
 import { Types } from "mongoose";
 import { Device, DeviceDocument } from "../models/Device";
 import { RefreshToken } from "../models/RefreshToken";
-import { User } from "../models/User";
 import { Shop } from "../models/Shop";
 import { AuditLog } from "../models/AuditLog";
 import { membershipFor } from "./membership";

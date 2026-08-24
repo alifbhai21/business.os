@@ -62,3 +62,10 @@ export const syncPullQuerySchema = z.object({
   cursor: z.string().datetime({ offset: true }).optional(),
   limit: z.coerce.number().int().positive().max(500).optional(),
 });
+
+/** Phase 14 — sync success-rate KPI window. */
+export const syncStatsQuerySchema = z.object({
+  businessId: z.string().min(1, "businessId is required"),
+  /** ISO timestamp — start of the aggregation window (default: last 7 days). */
+  since: z.string().datetime({ offset: true }).optional(),
+});

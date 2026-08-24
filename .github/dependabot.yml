@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Server dependencies — weekly review; npm audit gates high/critical in CI.
+  - package-ecosystem: npm
+    directory: "/server"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # Mobile (Expo) dependencies — Expo SDK upgrades are coordinated manually,
+  # so only patch/minor drift is automated here.
+  - package-ecosystem: npm
+    directory: "/mobile"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # Keep the CI workflow's actions current.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

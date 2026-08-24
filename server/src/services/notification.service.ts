@@ -193,7 +193,7 @@ export async function listNotifications(userId: string, options: ListOptions) {
     ...(suppressed.size > 0 ? { type: { $nin: [...suppressed] } } : {}),
   };
 
-  let rows = await Notification.find(baseFilter)
+  const rows = await Notification.find(baseFilter)
     .sort({ createdAt: -1 })
     .limit(pagination.limit + pagination.skip)
     .lean();

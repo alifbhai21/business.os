@@ -214,7 +214,7 @@ export async function login(input: LoginInput) {
   };
 }
 
-export async function refresh(refreshToken: string, deviceId: string) {
+export async function refresh(refreshToken: string, _deviceId: string) {
   const tokenHash = sha256(refreshToken);
   const record = await RefreshToken.findOne({ tokenHash });
   if (!record) {

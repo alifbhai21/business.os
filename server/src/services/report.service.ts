@@ -391,9 +391,6 @@ export async function inventoryReport(
   }
 
   const match = { businessId: oid(businessId) };
-  const lowStockExpr = {
-    $expr: { $and: [{ $gt: ["$minStock", 0] }, { $lte: ["$currentStock", "$minStock"] }] },
-  };
 
   const [summaryAgg] = await Product.aggregate<Record<string, number>>([
     { $match: match },
