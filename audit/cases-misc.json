@@ -1,0 +1,10 @@
+[
+  ["invoice-print-html", "GET", "/api/v1/invoices/sale/6a8c9d2d9a76c6b095f955cc/print?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"],
+  ["devices-list", "GET", "/api/v1/devices?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["audit-list", "GET", "/api/v1/audit?businessId=6a8c8c779a76c6b095f949c7&limit=100", 200, "owner"],
+  ["search-q", "GET", "/api/v1/search?businessId=6a8c8c779a76c6b095f949c7&q=Audit", 200, "owner"],
+  ["notifications-regression", "GET", "/api/v1/notifications?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["notifications-prefs-regression", "GET", "/api/v1/notifications/preferences?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["report-inventory", "GET", "/api/v1/reports/inventory?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"],
+  ["inventory-movements-page", "GET", "/api/v1/inventory/movements?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4&limit=5", 200, "owner"]
+]

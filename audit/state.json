@@ -1,0 +1,33 @@
+{
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YThjOGMzNjlhNzZjNmIwOTVmOTQ5OWYiLCJkZXZpY2VJZCI6IjZhOGQyNGIxNWUxY2JiYzVlY2RiMjg2NSIsInNlc3Npb25JZCI6ImQ3YjA2NDRkNjZiOWE4OTYxNjljZWY1NmI4MDgzN2YwIiwiaWF0IjoxNzg3NjM0ODY1LCJleHAiOjE3ODc2MzU3NjUsInN1YiI6IjZhOGM4YzM2OWE3NmM2YjA5NWY5NDk5ZiJ9.PHYgytuZcV6viEdZ7TsymNavMgxwm9bwQTiooZWNsQs",
+    "refreshToken": "TWn6H93OLGV7BhJYcu_8O448r_80wsQCHF_U8Ye1zLf-8MKAkDZp1aceUmgYTmkM",
+    "userId": "6a8c8c369a76c6b095f9499f",
+    "businessId": "6a8c8c779a76c6b095f949c7",
+    "shopId": "6a8c8c999a76c6b095f949e4",
+    "shopBId": "6a8c8ca09a76c6b095f949ea",
+    "accountId": "6a8c8c999a76c6b095f949e6",
+    "bankAccountId": "6a8c8d4c9a76c6b095f94a87",
+    "categoryId": "6a8c8cbe9a76c6b095f94a0a",
+    "productId": "6a8c8cfc9a76c6b095f94a29",
+    "product2Id": "6a8c900f9a76c6b095f94cbd",
+    "customerId": "6a8c8d219a76c6b095f94a4a",
+    "supplierId": "6a8c8d219a76c6b095f94a4f",
+    "expenseId": "6a8c8d759a76c6b095f94abc",
+    "saleAId": "6a8c8dda9a76c6b095f94adc",
+    "saleBId": "6a8c8de49a76c6b095f94afc",
+    "saleCId": "6a8c8e379a76c6b095f94b4d",
+    "purchaseAId": "6a8c8faa9a76c6b095f94bfc",
+    "purchaseBId": "6a8c8fb79a76c6b095f94c1c",
+    "employeeId": "6a8c907a9a76c6b095f94e4d",
+    "device2Id": "6a8c909e9a76c6b095f94e88",
+    "sessionId": "d7b0644d66b9a896169cef56b80837f0",
+    "authTest": {
+        "email": "authaudit20260825@example.com",
+        "password": "password123",
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YThjOTc2ZTlhNzZjNmIwOTVmOTUwOGEiLCJkZXZpY2VJZCI6IjZhOGM5NzZlOWE3NmM2YjA5NWY5NTA4ZCIsInNlc3Npb25JZCI6Ijg0OGY2NDBlZjBlNTYxOTkwNTA2MzM1MmEwNzI1Y2U4IiwiaWF0IjoxNzg3NTk4NzAyLCJleHAiOjE3ODc1OTk2MDIsInN1YiI6IjZhOGM5NzZlOWE3NmM2YjA5NWY5NTA4YSJ9.88ihd1YjjqdcCPrsEn3TRAxdSycW0oj2mYHd_TvRD08",
+        "refreshToken": "Z8Nrjzqwp7V2uH6j2bRpO1FdHiGc04GgDB7yLtXP9utkpmxNGdAh0EzYGUmBh8QF",
+        "userId": "6a8c976e9a76c6b095f9508a",
+        "deviceId": "authaudit-dev-1",
+        "resetToken": "Q4i8qP0iJgE8tjrhOxbN-eaAM4vVs3Ni2D209gcIk1A"
+    }
+}

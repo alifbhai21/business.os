@@ -1,0 +1,15 @@
+[
+  ["sales-list-unauth", "GET", "/api/v1/sales?businessId=6a8c8c779a76c6b095f949c7", 401, "none"],
+  ["businesses-unauth", "GET", "/api/v1/businesses", 401, "none"],
+  ["employees-unauth", "GET", "/api/v1/employees?businessId=6a8c8c779a76c6b095f949c7", 401, "none"],
+  ["devices-unauth", "GET", "/api/v1/devices?businessId=6a8c8c779a76c6b095f949c7", 401, "none"],
+  ["search-unauth", "GET", "/api/v1/search?businessId=6a8c8c779a76c6b095f949c7&q=x", 401, "none"],
+  ["invoices-unauth", "GET", "/api/v1/invoices/sales?businessId=6a8c8c779a76c6b095f949c7", 401, "none"],
+  ["sales-foreign-biz", "GET", "/api/v1/sales?businessId=6a8a9f0b111bc81d5c19f02c", 404, "owner"],
+  ["employees-foreign-biz", "GET", "/api/v1/employees?businessId=6a8a9f0b111bc81d5c19f02c", 404, "owner"],
+  ["devices-foreign-biz", "GET", "/api/v1/devices?businessId=6a8a9f0b111bc81d5c19f02c", 404, "owner"],
+  ["audit-foreign-biz", "GET", "/api/v1/audit?businessId=6a8a9f0b111bc81d5c19f02c", 404, "owner"],
+  ["search-foreign-biz", "GET", "/api/v1/search?businessId=6a8a9f0b111bc81d5c19f02c&q=x", 404, "owner"],
+  ["reports-foreign-biz", "GET", "/api/v1/reports/inventory?businessId=6a8a9f0b111bc81d5c19f02c&shopId=6a8c8c999a76c6b095f949e4", 404, "owner"],
+  ["accounting-foreign-shop", "GET", "/api/v1/accounting/journal?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8ca09a76c6b095f949ea", 404, "owner"]
+]

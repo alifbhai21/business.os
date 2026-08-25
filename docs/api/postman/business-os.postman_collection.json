@@ -1,0 +1,5902 @@
+{
+  "info": {
+    "name": "Business OS",
+    "description": "Complete endpoint collection for the Business OS API, generated from server/src/routes and server/src/app.ts. Real requests executed through the running server (production app code) connected to MongoDB Atlas test DB business_os_api_test. Auth uses {{accessToken}} set by Register/Login pre-request scripts. No secrets stored.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "businessId",
+      "value": ""
+    },
+    {
+      "key": "shopId",
+      "value": ""
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "customerId",
+      "value": ""
+    },
+    {
+      "key": "supplierId",
+      "value": ""
+    },
+    {
+      "key": "saleId",
+      "value": ""
+    },
+    {
+      "key": "purchaseId",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "expenseId",
+      "value": ""
+    },
+    {
+      "key": "transferId",
+      "value": ""
+    },
+    {
+      "key": "employeeId",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
+    },
+    {
+      "key": "deviceId",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /ready",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ready",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,503]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Postman User {{$randomInt}}\",\"email\":\"postman{{$timestamp}}@example.com\",\"phone\":\"017{{$randomInt}}{{}}\",\"password\":\"password123\",\"deviceId\":\"postman-dev-{{$guid}}\",\"deviceName\":\"Postman\",\"platform\":\"android\",\"appVersion\":\"1.0.0\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('auth returns token', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.success).to.equal(true);",
+                  "  if (j.data && j.data.accessToken) {",
+                  "    pm.environment.set('accessToken', j.data.accessToken);",
+                  "    pm.environment.set('refreshToken', j.data.refreshToken);",
+                  "    pm.environment.set('email', j.data.user ? j.data.user.email : pm.environment.get('email'));",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{email}}\",\"password\":\"password123\",\"deviceId\":\"postman-login-{{$guid}}\",\"deviceName\":\"Postman\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('auth returns token', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.success).to.equal(true);",
+                  "  if (j.data && j.data.accessToken) {",
+                  "    pm.environment.set('accessToken', j.data.accessToken);",
+                  "    pm.environment.set('refreshToken', j.data.refreshToken);",
+                  "    pm.environment.set('email', j.data.user ? j.data.user.email : pm.environment.get('email'));",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"{{refreshToken}}\",\"deviceId\":\"postman-refresh-{{$guid}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,401]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"{{refreshToken}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /logout-all",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout-all"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,401]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /forgot-password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{email}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /reset-password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\":\"x\",\"password\":\"password123\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,401]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Business",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/businesses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/businesses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "businesses"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/businesses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Postman Business {{$timestamp}}\",\"type\":\"retail\",\"currency\":\"BDT\",\"taxRate\":0,\"allowNegativeStock\":false}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/businesses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "businesses"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('businessId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/businesses/{{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "businesses",
+                "{{businessId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/businesses/{{businessId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Postman Business Renamed\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "businesses",
+                "{{businessId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/businesses/{{businessId}}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Postman Business Patch\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "businesses",
+                "{{businessId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/businesses/{{businessId}}/modules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}/modules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "businesses",
+                "{{businessId}}",
+                "modules"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shops",
+      "item": [
+        {
+          "name": "POST /{{baseUrl}}/api/v1/shops",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Shop {{$timestamp}}\",\"branchCode\":\"BR-{{$randomInt}}\",\"openingCash\":50000}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shops"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('shopId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/shops",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shops"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/shops/{{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shops/{{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shops",
+                "{{shopId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/shops/{{shopId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Shop Renamed\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shops/{{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shops",
+                "{{shopId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/shops/{{shopId}}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Shop Patch\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shops/{{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shops",
+                "{{shopId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/shops/{{shopId}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"status\":\"ACTIVE\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shops/{{shopId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shops",
+                "{{shopId}}",
+                "status"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/products?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/products/lookup/barcode?businessId={{businessId}}&barcode=AUDIT-1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/lookup/barcode?businessId={{businessId}}&barcode=AUDIT-1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "lookup",
+                "barcode"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "barcode",
+                  "value": "AUDIT-1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/products",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Product {{$timestamp}}\",\"unit\":\"piece\",\"purchasePrice\":10000,\"sellingPrice\":15000,\"currentStock\":100,\"taxRate\":0,\"barcode\":\"AUDIT-{{$randomInt}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('productId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/products/{{productId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/products/{{productId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Product Updated\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/products/{{productId}}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Product Patch\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/products/{{productId}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"status\":\"ACTIVE\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "status"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/categories?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/categories",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Category {{$timestamp}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('categoryId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/categories/{{categoryId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{categoryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/categories/{{categoryId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Category Updated\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{categoryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/categories/{{categoryId}}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Category Patch\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{categoryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/categories/{{categoryId}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"status\":\"ACTIVE\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{categoryId}}",
+                "status"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/customers?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/customers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Customer {{}}\",\"phone\":\"017{{$randomInt}}{{}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('customerId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/customers/{{customerId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/customers/{{customerId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Customer Updated\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/customers/{{customerId}}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Customer Patch\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/customers/{{customerId}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"status\":\"ACTIVE\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customerId}}",
+                "status"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Suppliers",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/suppliers?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/suppliers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Supplier {{}}\",\"phone\":\"017{{$randomInt}}{{}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('supplierId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers",
+                "{{supplierId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Supplier Updated\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers",
+                "{{supplierId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Supplier Patch\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers",
+                "{{supplierId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/suppliers/{{supplierId}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"status\":\"ACTIVE\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suppliers/{{supplierId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers",
+                "{{supplierId}}",
+                "status"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Units",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/units",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/units",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "units"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounts?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/accounts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"name\":\"Postman Cash {{$timestamp}}\",\"type\":\"CASH\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('accountId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/accounts/transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"fromAccountId\":\"{{accountId}}\",\"toAccountId\":\"{{accountId}}\",\"amount\":100,\"note\":\"noop\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/transfer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "transfer"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounts/{{accountId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/accounts/{{accountId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"name\":\"Cash Renamed\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /{{baseUrl}}/api/v1/accounts/{{accountId}}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"name\":\"Cash Patch\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/payments?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/payments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"type\":\"customer_payment\",\"customerId\":\"{{customerId}}\",\"amount\":1000,\"method\":\"CASH\",\"accountId\":\"{{accountId}}\",\"idempotencyKey\":\"pm-key-{{$guid}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('paymentId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/payments/{{paymentId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "{{paymentId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/expenses?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "expenses"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/expenses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"category\":\"RENT\",\"amount\":2000,\"paymentAccountId\":\"{{accountId}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "expenses"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('expenseId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/expenses/{{expenseId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expenses/{{expenseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "expenses",
+                "{{expenseId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sales",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/sales?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/sales",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"customerId\":\"{{customerId}}\",\"items\":[{\"productId\":\"{{productId}}\",\"qty\":2}],\"paidAmount\":30000,\"accountId\":\"{{accountId}}\",\"localId\":\"pm-sale-{{$guid}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('saleId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/sales/{{saleId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales/{{saleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales",
+                "{{saleId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/sales/{{saleId}}/finalize",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"paidAmount\":0}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales/{{saleId}}/finalize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales",
+                "{{saleId}}",
+                "finalize"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/sales/{{saleId}}/void",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"reason\":\"audit void\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales/{{saleId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales",
+                "{{saleId}}",
+                "void"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,404,409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/sales/{{saleId}}/return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"items\":[{\"productId\":\"{{productId}}\",\"qty\":1}],\"reason\":\"audit return\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales/{{saleId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales",
+                "{{saleId}}",
+                "return"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,404,409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/sales/{{saleId}}/payments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"amount\":5000,\"method\":\"CASH\",\"accountId\":\"{{accountId}}\",\"idempotencyKey\":\"pm-spay-{{$guid}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales/{{saleId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales",
+                "{{saleId}}",
+                "payments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('paymentId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/sales/{{saleId}}/payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sales/{{saleId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sales",
+                "{{saleId}}",
+                "payments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Purchases",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/purchases?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/purchases",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"supplierId\":\"{{supplierId}}\",\"items\":[{\"productId\":\"{{productId}}\",\"qty\":5}],\"paidAmount\":25000,\"accountId\":\"{{accountId}}\",\"localId\":\"pm-pur-{{$guid}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('purchaseId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/purchases/{{purchaseId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases/{{purchaseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases",
+                "{{purchaseId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/finalize",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"paidAmount\":0}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases/{{purchaseId}}/finalize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases",
+                "{{purchaseId}}",
+                "finalize"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/void",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"reason\":\"audit void\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases/{{purchaseId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases",
+                "{{purchaseId}}",
+                "void"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,404,409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"items\":[{\"productId\":\"{{productId}}\",\"qty\":1}],\"reason\":\"audit return\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases/{{purchaseId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases",
+                "{{purchaseId}}",
+                "return"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,404,409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/payments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"amount\":5000,\"method\":\"CASH\",\"accountId\":\"{{accountId}}\",\"idempotencyKey\":\"pm-ppay-{{$guid}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases/{{purchaseId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases",
+                "{{purchaseId}}",
+                "payments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchases/{{purchaseId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchases",
+                "{{purchaseId}}",
+                "payments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/invoices/sales?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/invoices/sales?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "invoices",
+                "sales"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/invoices/purchases?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/invoices/purchases?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "invoices",
+                "purchases"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/invoices/sale/{{saleId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/invoices/sale/{{saleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "invoices",
+                "sale",
+                "{{saleId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/invoices/sale/{{saleId}}/print",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/invoices/sale/{{saleId}}/print",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "invoices",
+                "sale",
+                "{{saleId}}",
+                "print"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/inventory/stock?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/stock?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "stock"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/inventory/movements?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/movements?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "movements"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/inventory/adjust",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"productId\":\"{{productId}}\",\"qtyChange\":2,\"reason\":\"audit adjust\",\"kind\":\"adjustment\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/adjust",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "adjust"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,201,400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/inventory/opening",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"productId\":\"{{productId}}\",\"quantity\":10}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/inventory/opening",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "inventory",
+                "opening"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,201,400]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transfers",
+      "item": [
+        {
+          "name": "POST /{{baseUrl}}/api/v1/transfers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"sourceShopId\":\"{{shopId}}\",\"destShopId\":\"{{shopId}}\",\"productId\":\"{{productId}}\",\"quantity\":1,\"notes\":\"audit transfer\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,201,400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/transfers?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transfers?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/transfers/{{transferId}}/status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"status\":\"RECEIVED\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transfers/{{transferId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "{{transferId}}",
+                "status"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Accounting Reports",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounting/journal?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounting/journal?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounting",
+                "journal"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounting/chart?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounting/chart?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounting",
+                "chart"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounting/ledger?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounting/ledger?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounting",
+                "ledger"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounting/trial-balance?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounting/trial-balance?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounting",
+                "trial-balance"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounting/profit-loss?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounting/profit-loss?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounting",
+                "profit-loss"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounting/balance-sheet?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounting/balance-sheet?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounting",
+                "balance-sheet"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/accounting/cash-flow?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounting/cash-flow?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounting",
+                "cash-flow"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/dashboard?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/reports/sales?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/sales?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "sales"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/reports/purchases?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/purchases?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "purchases"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/reports/inventory?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/inventory?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "inventory"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/reports/profit-loss?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/profit-loss?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "profit-loss"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/reports/receivables?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/receivables?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "receivables"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/reports/payables?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/payables?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "payables"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/reports/expenses?businessId={{businessId}}&shopId={{shopId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/expenses?businessId={{businessId}}&shopId={{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "expenses"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "shopId",
+                  "value": "{{shopId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/search?businessId={{businessId}}&q=Postman",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/search?businessId={{businessId}}&q=Postman",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "q",
+                  "value": "Postman"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/employees?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/employees?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/employees",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Postman Employee {{}}\",\"phone\":\"017{{$randomInt}}{{}}\",\"role\":\"Salesperson\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employees"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (pm.response.code < 300 && j && j.data && j.data.id) {",
+                  "  pm.environment.set('employeeId', String(j.data.id));",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/employees/{{employeeId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"name\":\"Employee Renamed\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employees",
+                "{{employeeId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /{{baseUrl}}/api/v1/employees/{{employeeId}}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employees",
+                "{{employeeId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "roles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/roles",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"employeeId\":\"{{employeeId}}\",\"role\":\"Manager\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "roles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400,403,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/devices?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/devices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"deviceId\":\"pm-dev-{{$guid}}\",\"deviceName\":\"Postman\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/devices/{{deviceId}}/revoke",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices",
+                "{{deviceId}}",
+                "revoke"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/devices/{{deviceId}}/sync",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices/{{deviceId}}/sync",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices",
+                "{{deviceId}}",
+                "sync"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Audit",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/audit?businessId={{businessId}}&limit=100",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/audit?businessId={{businessId}}&limit=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sync",
+      "item": [
+        {
+          "name": "POST /{{baseUrl}}/api/v1/sync/push",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"shopId\":\"{{shopId}}\",\"ops\":[{\"localId\":\"pm-sync-{{$guid}}\",\"type\":\"customer\",\"payload\":{\"businessId\":\"{{businessId}}\",\"name\":\"Sync Customer\",\"phone\":\"017{{$randomInt}}\"}}]}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sync/push",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sync",
+                "push"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/sync/pull?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sync/pull?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sync",
+                "pull"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/sync/restore?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sync/restore?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sync",
+                "restore"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/sync/stats?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sync/stats?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sync",
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Backup",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/backup/status?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/backup/status?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "backup",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Export",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/export/data?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/export/data?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "export",
+                "data"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/export/csv?businessId={{businessId}}&type=customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/export/csv?businessId={{businessId}}&type=customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "export",
+                "csv"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "type",
+                  "value": "customers"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/export/excel?businessId={{businessId}}&type=sales",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/export/excel?businessId={{businessId}}&type=sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "export",
+                "excel"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                },
+                {
+                  "key": "type",
+                  "value": "sales"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/notifications?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /{{baseUrl}}/api/v1/notifications/preferences?businessId={{businessId}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/preferences?businessId={{businessId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "preferences"
+              ],
+              "query": [
+                {
+                  "key": "businessId",
+                  "value": "{{businessId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /{{baseUrl}}/api/v1/notifications/preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\",\"lowStock\":true}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "preferences"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/notifications/read-all",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "read-all"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /{{baseUrl}}/api/v1/notifications/{{notificationId}}/read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\":\"{{businessId}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ops",
+      "item": [
+        {
+          "name": "GET /{{baseUrl}}/api/v1/ops/metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ops/metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ops",
+                "metrics"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

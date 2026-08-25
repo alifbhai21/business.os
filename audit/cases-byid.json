@@ -1,0 +1,15 @@
+[
+  ["shop-list(bid)", "GET", "/api/v1/shops?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["shop-get(bid)", "GET", "/api/v1/shops/6a8c8c999a76c6b095f949e4?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["product-get(bid)", "GET", "/api/v1/products/6a8c8cfc9a76c6b095f94a29?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["category-get(bid)", "GET", "/api/v1/categories/6a8c8cbe9a76c6b095f94a0a?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["customer-get(bid)", "GET", "/api/v1/customers/6a8c8d219a76c6b095f94a4a?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["supplier-get(bid)", "GET", "/api/v1/suppliers/6a8c8d219a76c6b095f94a4f?businessId=6a8c8c779a76c6b095f949c7", 200, "owner"],
+  ["account-get(bid)", "GET", "/api/v1/accounts/6a8c8c999a76c6b095f949e6?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"],
+  ["payment-get(bid)", "GET", "/api/v1/payments/6a8c995e9a76c6b095f951da?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"],
+  ["expense-get(bid)", "GET", "/api/v1/expenses/6a8c8d759a76c6b095f94abc?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"],
+  ["sale-get(bid)", "GET", "/api/v1/sales/6a8c8dda9a76c6b095f94adc?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"],
+  ["purchase-get(bid)", "GET", "/api/v1/purchases/6a8c8faa9a76c6b095f94bfc?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"],
+  ["report-sales(bid)", "GET", "/api/v1/reports/sales?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"],
+  ["report-purchases(bid)", "GET", "/api/v1/reports/purchases?businessId=6a8c8c779a76c6b095f949c7&shopId=6a8c8c999a76c6b095f949e4", 200, "owner"]
+]

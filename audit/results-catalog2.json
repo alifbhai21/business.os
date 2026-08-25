@@ -1,0 +1,244 @@
+{
+  "prod-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9c6a9a76c6b095f954b6",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "categoryId": null,
+        "name": "AuditProd-1787599977469",
+        "sku": null,
+        "barcode": null,
+        "brand": null,
+        "unit": "piece",
+        "purchasePrice": 2000,
+        "sellingPrice": 3000,
+        "wholesalePrice": 0,
+        "minPrice": 0,
+        "taxRate": 0,
+        "currentStock": 50,
+        "minStock": 0,
+        "maxStock": 0,
+        "avgCost": 2000,
+        "preferredSupplierId": null,
+        "imageUrl": null,
+        "description": null,
+        "status": "ACTIVE",
+        "variants": [],
+        "createdAt": "2026-08-24T19:32:58.355Z",
+        "updatedAt": "2026-08-24T19:32:58.355Z",
+        "duplicate": false
+      }
+    },
+    "path": "/api/v1/products",
+    "method": "POST"
+  },
+  "prod-dup-barcode": {
+    "status": 409,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "CONFLICT",
+        "message": "A product with this barcode already exists in this business"
+      }
+    },
+    "path": "/api/v1/products",
+    "method": "POST"
+  },
+  "prod-update": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8cfc9a76c6b095f94a29",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "categoryId": "6a8c8cbe9a76c6b095f94a0a",
+        "name": "FULLAUDIT-PROD-PATCH",
+        "sku": null,
+        "barcode": "AUDIT-1787596026",
+        "brand": null,
+        "unit": "piece",
+        "purchasePrice": 10000,
+        "sellingPrice": 15000,
+        "wholesalePrice": 0,
+        "minPrice": 0,
+        "taxRate": 0,
+        "currentStock": 105,
+        "minStock": 110,
+        "maxStock": 0,
+        "avgCost": 10000,
+        "preferredSupplierId": null,
+        "imageUrl": null,
+        "description": null,
+        "status": "ACTIVE",
+        "variants": [],
+        "createdAt": "2026-08-24T18:27:08.708Z",
+        "updatedAt": "2026-08-24T19:20:42.927Z"
+      }
+    },
+    "path": "/api/v1/products/6a8c8cfc9a76c6b095f94a29",
+    "method": "PUT"
+  },
+  "prod-update-spoof-total": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8cfc9a76c6b095f94a29",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "categoryId": "6a8c8cbe9a76c6b095f94a0a",
+        "name": "x",
+        "sku": null,
+        "barcode": "AUDIT-1787596026",
+        "brand": null,
+        "unit": "piece",
+        "purchasePrice": 10000,
+        "sellingPrice": 15000,
+        "wholesalePrice": 0,
+        "minPrice": 0,
+        "taxRate": 0,
+        "currentStock": 105,
+        "minStock": 110,
+        "maxStock": 0,
+        "avgCost": 10000,
+        "preferredSupplierId": null,
+        "imageUrl": null,
+        "description": null,
+        "status": "ACTIVE",
+        "variants": [],
+        "createdAt": "2026-08-24T18:27:08.708Z",
+        "updatedAt": "2026-08-24T19:32:59.037Z"
+      }
+    },
+    "path": "/api/v1/products/6a8c8cfc9a76c6b095f94a29",
+    "method": "PUT"
+  },
+  "prod-foreign": {
+    "status": 404,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Business not found"
+      }
+    },
+    "path": "/api/v1/products",
+    "method": "POST"
+  },
+  "cust-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9c6b9a76c6b095f954cc",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "AuditCust-1787599977469",
+        "phone": "01777770001",
+        "email": null,
+        "address": null,
+        "customerCode": null,
+        "openingBalance": 0,
+        "creditLimit": 0,
+        "currentDue": 0,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T19:32:59.306Z",
+        "updatedAt": "2026-08-24T19:32:59.306Z",
+        "duplicate": false
+      }
+    },
+    "path": "/api/v1/customers",
+    "method": "POST"
+  },
+  "cust-update": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8d219a76c6b095f94a4a",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-CUST-PATCH",
+        "phone": "01766660001",
+        "email": null,
+        "address": "Audit Address",
+        "customerCode": null,
+        "openingBalance": 0,
+        "creditLimit": 20000,
+        "currentDue": 30850,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:27:45.669Z",
+        "updatedAt": "2026-08-24T19:20:44.853Z"
+      }
+    },
+    "path": "/api/v1/customers/6a8c8d219a76c6b095f94a4a",
+    "method": "PUT"
+  },
+  "cust-status": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8d219a76c6b095f94a4a",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-CUST-PATCH",
+        "phone": "01766660001",
+        "email": null,
+        "address": "Audit Address",
+        "customerCode": null,
+        "openingBalance": 0,
+        "creditLimit": 20000,
+        "currentDue": 30850,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:27:45.669Z",
+        "updatedAt": "2026-08-24T19:20:44.853Z"
+      }
+    },
+    "path": "/api/v1/customers/6a8c8d219a76c6b095f94a4a/status",
+    "method": "PATCH"
+  },
+  "sup-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9c6b9a76c6b095f954db",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "AuditSup-1787599977469",
+        "phone": "01777770002",
+        "email": null,
+        "company": null,
+        "address": null,
+        "openingBalance": 0,
+        "currentPayable": 0,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T19:32:59.951Z",
+        "updatedAt": "2026-08-24T19:32:59.951Z",
+        "duplicate": false
+      }
+    },
+    "path": "/api/v1/suppliers",
+    "method": "POST"
+  },
+  "sup-update": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8d219a76c6b095f94a4f",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-SUP-PATCH",
+        "phone": "01766660002",
+        "email": null,
+        "company": null,
+        "address": null,
+        "openingBalance": 0,
+        "currentPayable": 56500,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:27:45.897Z",
+        "updatedAt": "2026-08-24T19:20:42.025Z"
+      }
+    },
+    "path": "/api/v1/suppliers/6a8c8d219a76c6b095f94a4f",
+    "method": "PUT"
+  }
+}

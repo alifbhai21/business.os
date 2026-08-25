@@ -1,0 +1,250 @@
+{
+  "biz-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9c669a76c6b095f9546f",
+        "name": "AuditBiz-C-1787599973578",
+        "type": "retail",
+        "currency": "BDT",
+        "taxRate": 5,
+        "fiscalYear": "1 July - 30 June",
+        "allowNegativeStock": false,
+        "address": null,
+        "phone": null,
+        "email": null,
+        "logo": null,
+        "customExpenseCategories": [],
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T19:32:54.280Z",
+        "updatedAt": "2026-08-24T19:32:54.280Z"
+      }
+    },
+    "path": "/api/v1/businesses",
+    "method": "POST"
+  },
+  "biz-update": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-PATCHED",
+        "type": "retail",
+        "currency": "BDT",
+        "taxRate": 0,
+        "fiscalYear": "1 July - 30 June",
+        "allowNegativeStock": false,
+        "address": null,
+        "phone": null,
+        "email": null,
+        "logo": null,
+        "customExpenseCategories": [],
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:24:55.796Z",
+        "updatedAt": "2026-08-24T18:25:10.562Z"
+      }
+    },
+    "path": "/api/v1/businesses/6a8c8c779a76c6b095f949c7",
+    "method": "PUT"
+  },
+  "biz-patch": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-PATCHED",
+        "type": "retail",
+        "currency": "BDT",
+        "taxRate": 0,
+        "fiscalYear": "1 July - 30 June",
+        "allowNegativeStock": false,
+        "address": null,
+        "phone": null,
+        "email": null,
+        "logo": null,
+        "customExpenseCategories": [],
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:24:55.796Z",
+        "updatedAt": "2026-08-24T18:25:10.562Z"
+      }
+    },
+    "path": "/api/v1/businesses/6a8c8c779a76c6b095f949c7",
+    "method": "PATCH"
+  },
+  "biz-foreign-update": {
+    "status": 404,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Business not found"
+      }
+    },
+    "path": "/api/v1/businesses/6a8a9f0b111bc81d5c19f02c",
+    "method": "PUT"
+  },
+  "biz-invalid": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Business name is required (name)",
+        "fields": {
+          "name": [
+            "Business name is required"
+          ],
+          "type": [
+            "Invalid enum value. Expected 'retail' | 'wholesale' | 'retail_wholesale' | 'service' | 'distribution' | 'manufacturing' | 'restaurant' | 'online' | 'construction' | 'other', received 'bogus'"
+          ]
+        }
+      }
+    },
+    "path": "/api/v1/businesses",
+    "method": "POST"
+  },
+  "shop-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9c679a76c6b095f95486",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "AuditShop-1787599973578",
+        "branchCode": "AU-1787599973578",
+        "address": null,
+        "phone": null,
+        "manager": null,
+        "isWarehouse": false,
+        "openingCash": 30000,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T19:32:55.267Z",
+        "updatedAt": "2026-08-24T19:32:55.267Z"
+      }
+    },
+    "path": "/api/v1/shops",
+    "method": "POST"
+  },
+  "shop-dup": {
+    "status": 409,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "CONFLICT",
+        "message": "A shop with this branch code already exists in this business"
+      }
+    },
+    "path": "/api/v1/shops",
+    "method": "POST"
+  },
+  "shop-update": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8c999a76c6b095f949e4",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-SHOPA-PATCH2",
+        "branchCode": "FA-SA-1787595929",
+        "address": null,
+        "phone": null,
+        "manager": null,
+        "isWarehouse": false,
+        "openingCash": 50000,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:25:29.312Z",
+        "updatedAt": "2026-08-24T19:32:55.778Z"
+      }
+    },
+    "path": "/api/v1/shops/6a8c8c999a76c6b095f949e4",
+    "method": "PUT"
+  },
+  "shop-patch-status": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8c999a76c6b095f949e4",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-SHOPA-PATCH2",
+        "branchCode": "FA-SA-1787595929",
+        "address": null,
+        "phone": null,
+        "manager": null,
+        "isWarehouse": false,
+        "openingCash": 50000,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:25:29.312Z",
+        "updatedAt": "2026-08-24T19:32:55.778Z"
+      }
+    },
+    "path": "/api/v1/shops/6a8c8c999a76c6b095f949e4/status",
+    "method": "PATCH"
+  },
+  "shop-foreign-create": {
+    "status": 404,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Business not found"
+      }
+    },
+    "path": "/api/v1/shops",
+    "method": "POST"
+  },
+  "cat-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9c689a76c6b095f9549b",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "AuditCat-1787599973578",
+        "description": null,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T19:32:56.232Z",
+        "updatedAt": "2026-08-24T19:32:56.232Z"
+      }
+    },
+    "path": "/api/v1/categories",
+    "method": "POST"
+  },
+  "cat-update": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8cbe9a76c6b095f94a0a",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-CAT",
+        "description": null,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:26:06.634Z",
+        "updatedAt": "2026-08-24T19:32:56.466Z"
+      }
+    },
+    "path": "/api/v1/categories/6a8c8cbe9a76c6b095f94a0a",
+    "method": "PUT"
+  },
+  "cat-patch-status": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8cbe9a76c6b095f94a0a",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "name": "FULLAUDIT-CAT",
+        "description": null,
+        "status": "ACTIVE",
+        "createdAt": "2026-08-24T18:26:06.634Z",
+        "updatedAt": "2026-08-24T19:32:56.466Z"
+      }
+    },
+    "path": "/api/v1/categories/6a8c8cbe9a76c6b095f94a0a/status",
+    "method": "PATCH"
+  }
+}

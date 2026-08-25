@@ -1,0 +1,8 @@
+{
+  "businessId": "6a8c8c779a76c6b095f949c7",
+  "shopId": "6a8c8c999a76c6b095f949e4",
+  "ops": [
+    { "localId": "audit-cx-2", "type": "sale", "payload": { "businessId": "6a8c8c779a76c6b095f949c7", "customerId": "6a8c8d219a76c6b095f94a4a", "items": [{ "productId": "000000000000000000000000", "qty": 1 }], "paidAmount": 1000, "accountId": "6a8c8c999a76c6b095f949e6" } },
+    { "localId": "audit-badlocal", "type": "customer", "payload": { "businessId": "6a8c8c779a76c6b095f949c7", "name": "X", "phone": "0179" } }
+  ]
+}

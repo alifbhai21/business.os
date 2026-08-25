@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import { tokenStorage } from "./storage";
 
 const DEFAULT_API_URL = Platform.select({
   android: "http://10.0.2.2:4000",
@@ -21,29 +21,29 @@ export class ApiError extends Error {
 }
 
 export async function getDeviceId(): Promise<string> {
-  const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+  const existing = await tokenStorage.getItemAsync(DEVICE_ID_KEY);
   if (existing) return existing;
   const fresh = `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  await SecureStore.setItemAsync(DEVICE_ID_KEY, fresh);
+  await tokenStorage.setItemAsync(DEVICE_ID_KEY, fresh);
   return fresh;
 }
 
 export async function persistSession(accessToken: string, refreshToken: string): Promise<void> {
-  await SecureStore.setItemAsync(ACCESS_KEY, accessToken);
-  await SecureStore.setItemAsync(REFRESH_KEY, refreshToken);
+  await tokenStorage.setItemAsync(ACCESS_KEY, accessToken);
+  await tokenStorage.setItemAsync(REFRESH_KEY, refreshToken);
 }
 
 export async function clearSession(): Promise<void> {
-  await SecureStore.deleteItemAsync(ACCESS_KEY);
-  await SecureStore.deleteItemAsync(REFRESH_KEY);
+  await tokenStorage.deleteItemAsync(ACCESS_KEY);
+  await tokenStorage.deleteItemAsync(REFRESH_KEY);
 }
 
 export async function getStoredAccessToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(ACCESS_KEY);
+  return tokenStorage.getItemAsync(ACCESS_KEY);
 }
 
 export async function getStoredRefreshToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(REFRESH_KEY);
+  return tokenStorage.getItemAsync(REFRESH_KEY);
 }
 
 interface SendOptions {

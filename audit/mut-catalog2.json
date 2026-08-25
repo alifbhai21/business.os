@@ -1,0 +1,12 @@
+[
+  {"label": "prod-create", "method": "POST", "path": "/api/v1/products", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "AuditProd-{{ts}}", "unit": "piece", "purchasePrice": 2000, "sellingPrice": 3000, "currentStock": 50, "taxRate": 0}, "expect": 201},
+  {"label": "prod-dup-barcode", "method": "POST", "path": "/api/v1/products", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "AuditProdDup", "unit": "piece", "purchasePrice": 100, "sellingPrice": 150, "barcode": "AUDIT-1787596026"}, "expect": 409},
+  {"label": "prod-update", "method": "PUT", "path": "/api/v1/products/6a8c8cfc9a76c6b095f94a29", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "FULLAUDIT-PROD-PATCH"}, "expect": 200},
+  {"label": "prod-update-spoof-total", "method": "PUT", "path": "/api/v1/products/6a8c8cfc9a76c6b095f94a29", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "x", "avgCost": 99999}, "expect": 400},
+  {"label": "prod-foreign", "method": "POST", "path": "/api/v1/products", "body": {"businessId": "6a8a9f0b111bc81d5c19f02c", "name": "Bad", "unit": "pcs"}, "expect": 404},
+  {"label": "cust-create", "method": "POST", "path": "/api/v1/customers", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "AuditCust-{{ts}}", "phone": "01777770001"}, "expect": 201},
+  {"label": "cust-update", "method": "PUT", "path": "/api/v1/customers/6a8c8d219a76c6b095f94a4a", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "FULLAUDIT-CUST-PATCH"}, "expect": 200},
+  {"label": "cust-status", "method": "PATCH", "path": "/api/v1/customers/6a8c8d219a76c6b095f94a4a/status", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "status": "ACTIVE"}, "expect": 200},
+  {"label": "sup-create", "method": "POST", "path": "/api/v1/suppliers", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "AuditSup-{{ts}}", "phone": "01777770002"}, "expect": 201},
+  {"label": "sup-update", "method": "PUT", "path": "/api/v1/suppliers/6a8c8d219a76c6b095f94a4f", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "FULLAUDIT-SUP-PATCH"}, "expect": 200}
+]

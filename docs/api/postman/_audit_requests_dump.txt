@@ -1,0 +1,188 @@
+﻿### Health :: GET /health :: GET :: {{baseUrl}}/health
+### Health :: GET /ready :: GET :: {{baseUrl}}/ready
+### Auth :: POST /register :: POST :: {{baseUrl}}/api/v1/auth/register
+BODY: {"name":"Postman User {{$randomInt}}","email":"postman{{$timestamp}}@example.com","phone":"017{{$randomInt}}{{}}","password":"password123","deviceId":"postman-dev-{{$guid}}","deviceName":"Postman","platform":"android","appVersion":"1.0.0"}
+### Auth :: POST /login :: POST :: {{baseUrl}}/api/v1/auth/login
+BODY: {"email":"{{email}}","password":"password123","deviceId":"postman-login-{{$guid}}","deviceName":"Postman"}
+### Auth :: POST /refresh :: POST :: {{baseUrl}}/api/v1/auth/refresh
+BODY: {"refreshToken":"{{refreshToken}}","deviceId":"postman-refresh-{{$guid}}"}
+### Auth :: POST /logout :: POST :: {{baseUrl}}/api/v1/auth/logout
+BODY: {"refreshToken":"{{refreshToken}}"}
+### Auth :: POST /logout-all :: POST :: {{baseUrl}}/api/v1/auth/logout-all
+### Auth :: POST /forgot-password :: POST :: {{baseUrl}}/api/v1/auth/forgot-password
+BODY: {"email":"{{email}}"}
+### Auth :: POST /reset-password :: POST :: {{baseUrl}}/api/v1/auth/reset-password
+BODY: {"token":"x","password":"password123"}
+### Auth :: GET /me :: GET :: {{baseUrl}}/api/v1/auth/me
+### Business :: GET /{{baseUrl}}/api/v1/businesses :: GET :: {{baseUrl}}/api/v1/businesses
+### Business :: POST /{{baseUrl}}/api/v1/businesses :: POST :: {{baseUrl}}/api/v1/businesses
+BODY: {"name":"Postman Business {{$timestamp}}","type":"retail","currency":"BDT","taxRate":0,"allowNegativeStock":false}
+### Business :: GET /{{baseUrl}}/api/v1/businesses/{{businessId}} :: GET :: {{baseUrl}}/api/v1/businesses/{{businessId}}
+### Business :: PUT /{{baseUrl}}/api/v1/businesses/{{businessId}} :: PUT :: {{baseUrl}}/api/v1/businesses/{{businessId}}
+BODY: {"name":"Postman Business Renamed"}
+### Business :: PATCH /{{baseUrl}}/api/v1/businesses/{{businessId}} :: PATCH :: {{baseUrl}}/api/v1/businesses/{{businessId}}
+BODY: {"name":"Postman Business Patch"}
+### Business :: GET /{{baseUrl}}/api/v1/businesses/{{businessId}}/modules :: GET :: {{baseUrl}}/api/v1/businesses/{{businessId}}/modules
+### Shops :: POST /{{baseUrl}}/api/v1/shops :: POST :: {{baseUrl}}/api/v1/shops
+BODY: {"businessId":"{{businessId}}","name":"Postman Shop {{$timestamp}}","branchCode":"BR-{{$randomInt}}","openingCash":50000}
+### Shops :: GET /{{baseUrl}}/api/v1/shops :: GET :: {{baseUrl}}/api/v1/shops
+### Shops :: GET /{{baseUrl}}/api/v1/shops/{{shopId}} :: GET :: {{baseUrl}}/api/v1/shops/{{shopId}}
+### Shops :: PUT /{{baseUrl}}/api/v1/shops/{{shopId}} :: PUT :: {{baseUrl}}/api/v1/shops/{{shopId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Shop Renamed"}
+### Shops :: PATCH /{{baseUrl}}/api/v1/shops/{{shopId}} :: PATCH :: {{baseUrl}}/api/v1/shops/{{shopId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Shop Patch"}
+### Shops :: PATCH /{{baseUrl}}/api/v1/shops/{{shopId}}/status :: PATCH :: {{baseUrl}}/api/v1/shops/{{shopId}}/status
+BODY: {"businessId":"{{businessId}}","status":"ACTIVE"}
+### Products :: GET /{{baseUrl}}/api/v1/products?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/products?businessId={{businessId}}
+### Products :: GET /{{baseUrl}}/api/v1/products/lookup/barcode?businessId={{businessId}}&barcode=AUDIT-1 :: GET :: {{baseUrl}}/api/v1/products/lookup/barcode?businessId={{businessId}}&barcode=AUDIT-1
+### Products :: POST /{{baseUrl}}/api/v1/products :: POST :: {{baseUrl}}/api/v1/products
+BODY: {"businessId":"{{businessId}}","name":"Postman Product {{$timestamp}}","unit":"piece","purchasePrice":10000,"sellingPrice":15000,"currentStock":100,"taxRate":0,"barcode":"AUDIT-{{$randomInt}}"}
+### Products :: GET /{{baseUrl}}/api/v1/products/{{productId}} :: GET :: {{baseUrl}}/api/v1/products/{{productId}}
+### Products :: PUT /{{baseUrl}}/api/v1/products/{{productId}} :: PUT :: {{baseUrl}}/api/v1/products/{{productId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Product Updated"}
+### Products :: PATCH /{{baseUrl}}/api/v1/products/{{productId}} :: PATCH :: {{baseUrl}}/api/v1/products/{{productId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Product Patch"}
+### Products :: PATCH /{{baseUrl}}/api/v1/products/{{productId}}/status :: PATCH :: {{baseUrl}}/api/v1/products/{{productId}}/status
+BODY: {"businessId":"{{businessId}}","status":"ACTIVE"}
+### Categories :: GET /{{baseUrl}}/api/v1/categories?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/categories?businessId={{businessId}}
+### Categories :: POST /{{baseUrl}}/api/v1/categories :: POST :: {{baseUrl}}/api/v1/categories
+BODY: {"businessId":"{{businessId}}","name":"Postman Category {{$timestamp}}"}
+### Categories :: GET /{{baseUrl}}/api/v1/categories/{{categoryId}} :: GET :: {{baseUrl}}/api/v1/categories/{{categoryId}}
+### Categories :: PUT /{{baseUrl}}/api/v1/categories/{{categoryId}} :: PUT :: {{baseUrl}}/api/v1/categories/{{categoryId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Category Updated"}
+### Categories :: PATCH /{{baseUrl}}/api/v1/categories/{{categoryId}} :: PATCH :: {{baseUrl}}/api/v1/categories/{{categoryId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Category Patch"}
+### Categories :: PATCH /{{baseUrl}}/api/v1/categories/{{categoryId}}/status :: PATCH :: {{baseUrl}}/api/v1/categories/{{categoryId}}/status
+BODY: {"businessId":"{{businessId}}","status":"ACTIVE"}
+### Customers :: GET /{{baseUrl}}/api/v1/customers?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/customers?businessId={{businessId}}
+### Customers :: POST /{{baseUrl}}/api/v1/customers :: POST :: {{baseUrl}}/api/v1/customers
+BODY: {"businessId":"{{businessId}}","name":"Postman Customer {{}}","phone":"017{{$randomInt}}{{}}"}
+### Customers :: GET /{{baseUrl}}/api/v1/customers/{{customerId}} :: GET :: {{baseUrl}}/api/v1/customers/{{customerId}}
+### Customers :: PUT /{{baseUrl}}/api/v1/customers/{{customerId}} :: PUT :: {{baseUrl}}/api/v1/customers/{{customerId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Customer Updated"}
+### Customers :: PATCH /{{baseUrl}}/api/v1/customers/{{customerId}} :: PATCH :: {{baseUrl}}/api/v1/customers/{{customerId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Customer Patch"}
+### Customers :: PATCH /{{baseUrl}}/api/v1/customers/{{customerId}}/status :: PATCH :: {{baseUrl}}/api/v1/customers/{{customerId}}/status
+BODY: {"businessId":"{{businessId}}","status":"ACTIVE"}
+### Suppliers :: GET /{{baseUrl}}/api/v1/suppliers?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/suppliers?businessId={{businessId}}
+### Suppliers :: POST /{{baseUrl}}/api/v1/suppliers :: POST :: {{baseUrl}}/api/v1/suppliers
+BODY: {"businessId":"{{businessId}}","name":"Postman Supplier {{}}","phone":"017{{$randomInt}}{{}}"}
+### Suppliers :: GET /{{baseUrl}}/api/v1/suppliers/{{supplierId}} :: GET :: {{baseUrl}}/api/v1/suppliers/{{supplierId}}
+### Suppliers :: PUT /{{baseUrl}}/api/v1/suppliers/{{supplierId}} :: PUT :: {{baseUrl}}/api/v1/suppliers/{{supplierId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Supplier Updated"}
+### Suppliers :: PATCH /{{baseUrl}}/api/v1/suppliers/{{supplierId}} :: PATCH :: {{baseUrl}}/api/v1/suppliers/{{supplierId}}
+BODY: {"businessId":"{{businessId}}","name":"Postman Supplier Patch"}
+### Suppliers :: PATCH /{{baseUrl}}/api/v1/suppliers/{{supplierId}}/status :: PATCH :: {{baseUrl}}/api/v1/suppliers/{{supplierId}}/status
+BODY: {"businessId":"{{businessId}}","status":"ACTIVE"}
+### Units :: GET /{{baseUrl}}/api/v1/units :: GET :: {{baseUrl}}/api/v1/units
+### Accounts :: GET /{{baseUrl}}/api/v1/accounts?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/accounts?businessId={{businessId}}&shopId={{shopId}}
+### Accounts :: POST /{{baseUrl}}/api/v1/accounts :: POST :: {{baseUrl}}/api/v1/accounts
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","name":"Postman Cash {{$timestamp}}","type":"CASH"}
+### Accounts :: POST /{{baseUrl}}/api/v1/accounts/transfer :: POST :: {{baseUrl}}/api/v1/accounts/transfer
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","fromAccountId":"{{accountId}}","toAccountId":"{{accountId}}","amount":100,"note":"noop"}
+### Accounts :: GET /{{baseUrl}}/api/v1/accounts/{{accountId}} :: GET :: {{baseUrl}}/api/v1/accounts/{{accountId}}
+### Accounts :: PUT /{{baseUrl}}/api/v1/accounts/{{accountId}} :: PUT :: {{baseUrl}}/api/v1/accounts/{{accountId}}
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","name":"Cash Renamed"}
+### Accounts :: PATCH /{{baseUrl}}/api/v1/accounts/{{accountId}} :: PATCH :: {{baseUrl}}/api/v1/accounts/{{accountId}}
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","name":"Cash Patch"}
+### Payments :: GET /{{baseUrl}}/api/v1/payments?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/payments?businessId={{businessId}}&shopId={{shopId}}
+### Payments :: POST /{{baseUrl}}/api/v1/payments :: POST :: {{baseUrl}}/api/v1/payments
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","type":"customer_payment","customerId":"{{customerId}}","amount":1000,"method":"CASH","accountId":"{{accountId}}","idempotencyKey":"pm-key-{{$guid}}"}
+### Payments :: GET /{{baseUrl}}/api/v1/payments/{{paymentId}} :: GET :: {{baseUrl}}/api/v1/payments/{{paymentId}}
+### Expenses :: GET /{{baseUrl}}/api/v1/expenses?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/expenses?businessId={{businessId}}&shopId={{shopId}}
+### Expenses :: POST /{{baseUrl}}/api/v1/expenses :: POST :: {{baseUrl}}/api/v1/expenses
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","category":"RENT","amount":2000,"paymentAccountId":"{{accountId}}"}
+### Expenses :: GET /{{baseUrl}}/api/v1/expenses/{{expenseId}} :: GET :: {{baseUrl}}/api/v1/expenses/{{expenseId}}
+### Sales :: GET /{{baseUrl}}/api/v1/sales?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/sales?businessId={{businessId}}&shopId={{shopId}}
+### Sales :: POST /{{baseUrl}}/api/v1/sales :: POST :: {{baseUrl}}/api/v1/sales
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","customerId":"{{customerId}}","items":[{"productId":"{{productId}}","qty":2}],"paidAmount":30000,"accountId":"{{accountId}}","localId":"pm-sale-{{$guid}}"}
+### Sales :: GET /{{baseUrl}}/api/v1/sales/{{saleId}} :: GET :: {{baseUrl}}/api/v1/sales/{{saleId}}
+### Sales :: POST /{{baseUrl}}/api/v1/sales/{{saleId}}/finalize :: POST :: {{baseUrl}}/api/v1/sales/{{saleId}}/finalize
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","paidAmount":0}
+### Sales :: POST /{{baseUrl}}/api/v1/sales/{{saleId}}/void :: POST :: {{baseUrl}}/api/v1/sales/{{saleId}}/void
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","reason":"audit void"}
+### Sales :: POST /{{baseUrl}}/api/v1/sales/{{saleId}}/return :: POST :: {{baseUrl}}/api/v1/sales/{{saleId}}/return
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","items":[{"productId":"{{productId}}","qty":1}],"reason":"audit return"}
+### Sales :: POST /{{baseUrl}}/api/v1/sales/{{saleId}}/payments :: POST :: {{baseUrl}}/api/v1/sales/{{saleId}}/payments
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","amount":5000,"method":"CASH","accountId":"{{accountId}}","idempotencyKey":"pm-spay-{{$guid}}"}
+### Sales :: GET /{{baseUrl}}/api/v1/sales/{{saleId}}/payments :: GET :: {{baseUrl}}/api/v1/sales/{{saleId}}/payments
+### Purchases :: GET /{{baseUrl}}/api/v1/purchases?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/purchases?businessId={{businessId}}&shopId={{shopId}}
+### Purchases :: POST /{{baseUrl}}/api/v1/purchases :: POST :: {{baseUrl}}/api/v1/purchases
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","supplierId":"{{supplierId}}","items":[{"productId":"{{productId}}","qty":5}],"paidAmount":25000,"accountId":"{{accountId}}","localId":"pm-pur-{{$guid}}"}
+### Purchases :: GET /{{baseUrl}}/api/v1/purchases/{{purchaseId}} :: GET :: {{baseUrl}}/api/v1/purchases/{{purchaseId}}
+### Purchases :: POST /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/finalize :: POST :: {{baseUrl}}/api/v1/purchases/{{purchaseId}}/finalize
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","paidAmount":0}
+### Purchases :: POST /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/void :: POST :: {{baseUrl}}/api/v1/purchases/{{purchaseId}}/void
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","reason":"audit void"}
+### Purchases :: POST /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/return :: POST :: {{baseUrl}}/api/v1/purchases/{{purchaseId}}/return
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","items":[{"productId":"{{productId}}","qty":1}],"reason":"audit return"}
+### Purchases :: POST /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/payments :: POST :: {{baseUrl}}/api/v1/purchases/{{purchaseId}}/payments
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","amount":5000,"method":"CASH","accountId":"{{accountId}}","idempotencyKey":"pm-ppay-{{$guid}}"}
+### Purchases :: GET /{{baseUrl}}/api/v1/purchases/{{purchaseId}}/payments :: GET :: {{baseUrl}}/api/v1/purchases/{{purchaseId}}/payments
+### Invoices :: GET /{{baseUrl}}/api/v1/invoices/sales?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/invoices/sales?businessId={{businessId}}&shopId={{shopId}}
+### Invoices :: GET /{{baseUrl}}/api/v1/invoices/purchases?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/invoices/purchases?businessId={{businessId}}&shopId={{shopId}}
+### Invoices :: GET /{{baseUrl}}/api/v1/invoices/sale/{{saleId}} :: GET :: {{baseUrl}}/api/v1/invoices/sale/{{saleId}}
+### Invoices :: GET /{{baseUrl}}/api/v1/invoices/sale/{{saleId}}/print :: GET :: {{baseUrl}}/api/v1/invoices/sale/{{saleId}}/print
+### Inventory :: GET /{{baseUrl}}/api/v1/inventory/stock?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/inventory/stock?businessId={{businessId}}&shopId={{shopId}}
+### Inventory :: GET /{{baseUrl}}/api/v1/inventory/movements?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/inventory/movements?businessId={{businessId}}&shopId={{shopId}}
+### Inventory :: POST /{{baseUrl}}/api/v1/inventory/adjust :: POST :: {{baseUrl}}/api/v1/inventory/adjust
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","productId":"{{productId}}","qtyChange":2,"reason":"audit adjust","kind":"adjustment"}
+### Inventory :: POST /{{baseUrl}}/api/v1/inventory/opening :: POST :: {{baseUrl}}/api/v1/inventory/opening
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","productId":"{{productId}}","quantity":10}
+### Transfers :: POST /{{baseUrl}}/api/v1/transfers :: POST :: {{baseUrl}}/api/v1/transfers
+BODY: {"businessId":"{{businessId}}","sourceShopId":"{{shopId}}","destShopId":"{{shopId}}","productId":"{{productId}}","quantity":1,"notes":"audit transfer"}
+### Transfers :: GET /{{baseUrl}}/api/v1/transfers?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/transfers?businessId={{businessId}}&shopId={{shopId}}
+### Transfers :: PUT /{{baseUrl}}/api/v1/transfers/{{transferId}}/status :: PUT :: {{baseUrl}}/api/v1/transfers/{{transferId}}/status
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","status":"RECEIVED"}
+### Accounting Reports :: GET /{{baseUrl}}/api/v1/accounting/journal?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/accounting/journal?businessId={{businessId}}&shopId={{shopId}}
+### Accounting Reports :: GET /{{baseUrl}}/api/v1/accounting/chart?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/accounting/chart?businessId={{businessId}}&shopId={{shopId}}
+### Accounting Reports :: GET /{{baseUrl}}/api/v1/accounting/ledger?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/accounting/ledger?businessId={{businessId}}&shopId={{shopId}}
+### Accounting Reports :: GET /{{baseUrl}}/api/v1/accounting/trial-balance?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/accounting/trial-balance?businessId={{businessId}}&shopId={{shopId}}
+### Accounting Reports :: GET /{{baseUrl}}/api/v1/accounting/profit-loss?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/accounting/profit-loss?businessId={{businessId}}&shopId={{shopId}}
+### Accounting Reports :: GET /{{baseUrl}}/api/v1/accounting/balance-sheet?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/accounting/balance-sheet?businessId={{businessId}}&shopId={{shopId}}
+### Accounting Reports :: GET /{{baseUrl}}/api/v1/accounting/cash-flow?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/accounting/cash-flow?businessId={{businessId}}&shopId={{shopId}}
+### Dashboard :: GET /{{baseUrl}}/api/v1/dashboard?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/dashboard?businessId={{businessId}}&shopId={{shopId}}
+### Reports :: GET /{{baseUrl}}/api/v1/reports/sales?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/reports/sales?businessId={{businessId}}&shopId={{shopId}}
+### Reports :: GET /{{baseUrl}}/api/v1/reports/purchases?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/reports/purchases?businessId={{businessId}}&shopId={{shopId}}
+### Reports :: GET /{{baseUrl}}/api/v1/reports/inventory?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/reports/inventory?businessId={{businessId}}&shopId={{shopId}}
+### Reports :: GET /{{baseUrl}}/api/v1/reports/profit-loss?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/reports/profit-loss?businessId={{businessId}}&shopId={{shopId}}
+### Reports :: GET /{{baseUrl}}/api/v1/reports/receivables?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/reports/receivables?businessId={{businessId}}&shopId={{shopId}}
+### Reports :: GET /{{baseUrl}}/api/v1/reports/payables?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/reports/payables?businessId={{businessId}}&shopId={{shopId}}
+### Reports :: GET /{{baseUrl}}/api/v1/reports/expenses?businessId={{businessId}}&shopId={{shopId}} :: GET :: {{baseUrl}}/api/v1/reports/expenses?businessId={{businessId}}&shopId={{shopId}}
+### Search :: GET /{{baseUrl}}/api/v1/search?businessId={{businessId}}&q=Postman :: GET :: {{baseUrl}}/api/v1/search?businessId={{businessId}}&q=Postman
+### Employees :: GET /{{baseUrl}}/api/v1/employees?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/employees?businessId={{businessId}}
+### Employees :: POST /{{baseUrl}}/api/v1/employees :: POST :: {{baseUrl}}/api/v1/employees
+BODY: {"businessId":"{{businessId}}","name":"Postman Employee {{}}","phone":"017{{$randomInt}}{{}}","role":"Salesperson"}
+### Employees :: PUT /{{baseUrl}}/api/v1/employees/{{employeeId}} :: PUT :: {{baseUrl}}/api/v1/employees/{{employeeId}}
+BODY: {"businessId":"{{businessId}}","name":"Employee Renamed"}
+### Employees :: DELETE /{{baseUrl}}/api/v1/employees/{{employeeId}} :: DELETE :: {{baseUrl}}/api/v1/employees/{{employeeId}}
+BODY: {"businessId":"{{businessId}}"}
+### Roles :: GET /{{baseUrl}}/api/v1/roles :: GET :: {{baseUrl}}/api/v1/roles
+### Roles :: POST /{{baseUrl}}/api/v1/roles :: POST :: {{baseUrl}}/api/v1/roles
+BODY: {"businessId":"{{businessId}}","employeeId":"{{employeeId}}","role":"Manager"}
+### Devices :: GET /{{baseUrl}}/api/v1/devices?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/devices?businessId={{businessId}}
+### Devices :: POST /{{baseUrl}}/api/v1/devices :: POST :: {{baseUrl}}/api/v1/devices
+BODY: {"businessId":"{{businessId}}","deviceId":"pm-dev-{{$guid}}","deviceName":"Postman"}
+### Devices :: PUT /{{baseUrl}}/api/v1/devices/{{deviceId}}/revoke :: PUT :: {{baseUrl}}/api/v1/devices/{{deviceId}}/revoke
+BODY: {"businessId":"{{businessId}}"}
+### Devices :: PUT /{{baseUrl}}/api/v1/devices/{{deviceId}}/sync :: PUT :: {{baseUrl}}/api/v1/devices/{{deviceId}}/sync
+BODY: {"businessId":"{{businessId}}"}
+### Audit :: GET /{{baseUrl}}/api/v1/audit?businessId={{businessId}}&limit=100 :: GET :: {{baseUrl}}/api/v1/audit?businessId={{businessId}}&limit=100
+### Sync :: POST /{{baseUrl}}/api/v1/sync/push :: POST :: {{baseUrl}}/api/v1/sync/push
+BODY: {"businessId":"{{businessId}}","shopId":"{{shopId}}","ops":[{"localId":"pm-sync-{{$guid}}","type":"customer","payload":{"businessId":"{{businessId}}","name":"Sync Customer","phone":"017{{$randomInt}}"}}]}
+### Sync :: GET /{{baseUrl}}/api/v1/sync/pull?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/sync/pull?businessId={{businessId}}
+### Sync :: GET /{{baseUrl}}/api/v1/sync/restore?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/sync/restore?businessId={{businessId}}
+### Sync :: GET /{{baseUrl}}/api/v1/sync/stats?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/sync/stats?businessId={{businessId}}
+### Backup :: GET /{{baseUrl}}/api/v1/backup/status?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/backup/status?businessId={{businessId}}
+### Export :: GET /{{baseUrl}}/api/v1/export/data?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/export/data?businessId={{businessId}}
+### Export :: GET /{{baseUrl}}/api/v1/export/csv?businessId={{businessId}}&type=customers :: GET :: {{baseUrl}}/api/v1/export/csv?businessId={{businessId}}&type=customers
+### Export :: GET /{{baseUrl}}/api/v1/export/excel?businessId={{businessId}}&type=sales :: GET :: {{baseUrl}}/api/v1/export/excel?businessId={{businessId}}&type=sales
+### Notifications :: GET /{{baseUrl}}/api/v1/notifications?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/notifications?businessId={{businessId}}
+### Notifications :: GET /{{baseUrl}}/api/v1/notifications/preferences?businessId={{businessId}} :: GET :: {{baseUrl}}/api/v1/notifications/preferences?businessId={{businessId}}
+### Notifications :: PUT /{{baseUrl}}/api/v1/notifications/preferences :: PUT :: {{baseUrl}}/api/v1/notifications/preferences
+BODY: {"businessId":"{{businessId}}","lowStock":true}
+### Notifications :: POST /{{baseUrl}}/api/v1/notifications/read-all :: POST :: {{baseUrl}}/api/v1/notifications/read-all
+BODY: {"businessId":"{{businessId}}"}
+### Notifications :: POST /{{baseUrl}}/api/v1/notifications/{{notificationId}}/read :: POST :: {{baseUrl}}/api/v1/notifications/{{notificationId}}/read
+BODY: {"businessId":"{{businessId}}"}
+### Ops :: GET /{{baseUrl}}/api/v1/ops/metrics :: GET :: {{baseUrl}}/api/v1/ops/metrics

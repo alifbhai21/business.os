@@ -1,0 +1,161 @@
+{
+  "acc-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9cc39a76c6b095f95504",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "name": "AuditPettyCash-1787600066558",
+        "type": "CASH",
+        "accountNumber": null,
+        "currentBalance": 0,
+        "createdAt": "2026-08-24T19:34:27.359Z",
+        "updatedAt": "2026-08-24T19:34:27.359Z"
+      }
+    },
+    "path": "/api/v1/accounts",
+    "method": "POST"
+  },
+  "acc-badtype": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid enum value. Expected 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'CARD' | 'OTHER', received 'BITCOIN' (type)",
+        "fields": {
+          "type": [
+            "Invalid enum value. Expected 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'CARD' | 'OTHER', received 'BITCOIN'"
+          ]
+        }
+      }
+    },
+    "path": "/api/v1/accounts",
+    "method": "POST"
+  },
+  "acc-transfer": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "journalEntryId": "6a8c9cc39a76c6b095f95513",
+        "fromAccountId": "6a8c8c999a76c6b095f949e6",
+        "toAccountId": "6a8c8d4c9a76c6b095f94a87",
+        "amount": 1000,
+        "duplicate": false
+      }
+    },
+    "path": "/api/v1/accounts/transfer",
+    "method": "POST"
+  },
+  "acc-transfer-zero": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "must be > 0 (amount)",
+        "fields": {
+          "amount": [
+            "must be > 0"
+          ]
+        }
+      }
+    },
+    "path": "/api/v1/accounts/transfer",
+    "method": "POST"
+  },
+  "acc-transfer-crossshop": {
+    "status": 404,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Account not found"
+      }
+    },
+    "path": "/api/v1/accounts/transfer",
+    "method": "POST"
+  },
+  "acc-update": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c8c999a76c6b095f949e6",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "name": "Cash",
+        "type": "CASH",
+        "accountNumber": null,
+        "currentBalance": 92450,
+        "createdAt": "2026-08-24T18:25:29.362Z",
+        "updatedAt": "2026-08-24T19:34:27.888Z"
+      }
+    },
+    "path": "/api/v1/accounts/6a8c8c999a76c6b095f949e6",
+    "method": "PUT"
+  },
+  "exp-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9cc59a76c6b095f95536",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "category": "RENT",
+        "amount": 2500,
+        "paymentAccountId": "6a8c8c999a76c6b095f949e6",
+        "note": null,
+        "receiptUrl": null,
+        "expenseDate": "2026-08-24T19:34:29.617Z",
+        "localId": "audit-exp-1787600066558",
+        "deviceId": "6a8c9cc29a76c6b095f954f7",
+        "createdAt": "2026-08-24T19:34:29.623Z",
+        "updatedAt": "2026-08-24T19:34:29.623Z",
+        "duplicate": false
+      }
+    },
+    "path": "/api/v1/expenses",
+    "method": "POST"
+  },
+  "exp-duplicate-localid": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Insufficient account balance"
+      }
+    },
+    "path": "/api/v1/expenses",
+    "method": "POST"
+  },
+  "exp-badcat": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid expense category"
+      }
+    },
+    "path": "/api/v1/expenses",
+    "method": "POST"
+  },
+  "exp-foreign-shop": {
+    "status": 404,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Business not found"
+      }
+    },
+    "path": "/api/v1/expenses",
+    "method": "POST"
+  }
+}

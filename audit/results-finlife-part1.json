@@ -1,0 +1,458 @@
+{
+  "pay-cust-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9d2b9a76c6b095f9558e",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "type": "customer_payment",
+        "customerId": "6a8c8d219a76c6b095f94a4a",
+        "supplierId": null,
+        "saleId": null,
+        "purchaseId": null,
+        "amount": 2000,
+        "method": "CASH",
+        "accountId": "6a8c8c999a76c6b095f949e6",
+        "note": null,
+        "idempotencyKey": "audit-pay-cust-1787600170657",
+        "paymentDate": "2026-08-24T19:36:11.469Z",
+        "localId": "audit-pay-cust-1787600170657",
+        "deviceId": "6a8c9d2a9a76c6b095f9557e",
+        "duplicate": false
+      }
+    },
+    "ms": 745
+  },
+  "pay-cust-replay": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9d2b9a76c6b095f9558e",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "type": "customer_payment",
+        "customerId": "6a8c8d219a76c6b095f94a4a",
+        "supplierId": null,
+        "saleId": null,
+        "purchaseId": null,
+        "amount": 2000,
+        "method": "CASH",
+        "accountId": "6a8c8c999a76c6b095f949e6",
+        "note": null,
+        "idempotencyKey": "audit-pay-cust-1787600170657",
+        "paymentDate": "2026-08-24T19:36:11.469Z",
+        "localId": "audit-pay-cust-1787600170657",
+        "deviceId": "6a8c9d2a9a76c6b095f9557e",
+        "duplicate": true
+      }
+    },
+    "ms": 307
+  },
+  "pay-supplier": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9d2c9a76c6b095f955a8",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "type": "supplier_payment",
+        "customerId": null,
+        "supplierId": "6a8c8d219a76c6b095f94a4f",
+        "saleId": null,
+        "purchaseId": null,
+        "amount": 1000,
+        "method": "CASH",
+        "accountId": "6a8c8c999a76c6b095f949e6",
+        "note": null,
+        "idempotencyKey": "pay-sup-1787600170657",
+        "paymentDate": "2026-08-24T19:36:12.496Z",
+        "localId": null,
+        "deviceId": "6a8c9d2a9a76c6b095f9557e",
+        "duplicate": false
+      }
+    },
+    "ms": 666
+  },
+  "pay-bad-type": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "customerId is required for customer_payment (customerId)",
+        "fields": {
+          "customerId": [
+            "customerId is required for customer_payment"
+          ],
+          "supplierId": [
+            "customer_payment must not have a supplierId"
+          ]
+        }
+      }
+    },
+    "ms": 170
+  },
+  "pay-bad-account": {
+    "status": 404,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Account not found"
+      }
+    },
+    "ms": 335
+  },
+  "pay-negative": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "amount must be > 0 (amount)",
+        "fields": {
+          "amount": [
+            "amount must be > 0"
+          ]
+        }
+      }
+    },
+    "ms": 177
+  },
+  "sale-create": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9d2d9a76c6b095f955cc",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "invoiceNo": "INV-2026-FA-SA-1787595929-0008",
+        "customerId": "6a8c8d219a76c6b095f94a4a",
+        "customerName": "FULLAUDIT-CUST-PATCH",
+        "items": [
+          {
+            "productId": "6a8c8cfc9a76c6b095f94a29",
+            "productName": "FULLAUDIT-PROD-PATCH",
+            "variantName": null,
+            "qty": 2,
+            "returnedQty": 0,
+            "unitPrice": 15000,
+            "costPrice": 10000,
+            "discountAmount": 0,
+            "taxAmount": 0,
+            "lineTotal": 30000
+          }
+        ],
+        "subtotal": 30000,
+        "discountAmount": 0,
+        "taxAmount": 0,
+        "total": 30000,
+        "paidAmount": 10000,
+        "dueAmount": 20000,
+        "paymentAccountId": "6a8c8c999a76c6b095f949e6",
+        "paymentStatus": "PARTIAL",
+        "status": "COMPLETED",
+        "notes": null,
+        "saleDate": "2026-08-24T19:36:13.939Z",
+        "localId": "life-sale-1787600170657",
+        "deviceId": "6a8c9d2a9a76c6b095f9557e",
+        "createdAt": "2026-08-24T19:36:13.941Z",
+        "updatedAt": "2026-08-24T19:36:14.377Z",
+        "duplicate": false
+      }
+    },
+    "ms": 1204
+  },
+  "sale-get": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9d2d9a76c6b095f955cc",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "invoiceNo": "INV-2026-FA-SA-1787595929-0008",
+        "customerId": "6a8c8d219a76c6b095f94a4a",
+        "customerName": "FULLAUDIT-CUST-PATCH",
+        "items": [
+          {
+            "productId": "6a8c8cfc9a76c6b095f94a29",
+            "productName": "FULLAUDIT-PROD-PATCH",
+            "variantName": null,
+            "qty": 2,
+            "returnedQty": 0,
+            "unitPrice": 15000,
+            "costPrice": 10000,
+            "discountAmount": 0,
+            "taxAmount": 0,
+            "lineTotal": 30000
+          }
+        ],
+        "subtotal": 30000,
+        "discountAmount": 0,
+        "taxAmount": 0,
+        "total": 30000,
+        "paidAmount": 10000,
+        "dueAmount": 20000,
+        "paymentAccountId": "6a8c8c999a76c6b095f949e6",
+        "paymentStatus": "PARTIAL",
+        "status": "COMPLETED",
+        "notes": null,
+        "saleDate": "2026-08-24T19:36:13.939Z",
+        "localId": "life-sale-1787600170657",
+        "deviceId": "6a8c9d2a9a76c6b095f9557e",
+        "createdAt": "2026-08-24T19:36:13.941Z",
+        "updatedAt": "2026-08-24T19:36:14.377Z"
+      }
+    },
+    "ms": 256
+  },
+  "sale-replay": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9d2d9a76c6b095f955cc",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "invoiceNo": "INV-2026-FA-SA-1787595929-0008",
+        "customerId": "6a8c8d219a76c6b095f94a4a",
+        "customerName": "FULLAUDIT-CUST-PATCH",
+        "items": [
+          {
+            "productId": "6a8c8cfc9a76c6b095f94a29",
+            "productName": "FULLAUDIT-PROD-PATCH",
+            "variantName": null,
+            "qty": 2,
+            "returnedQty": 0,
+            "unitPrice": 15000,
+            "costPrice": 10000,
+            "discountAmount": 0,
+            "taxAmount": 0,
+            "lineTotal": 30000
+          }
+        ],
+        "subtotal": 30000,
+        "discountAmount": 0,
+        "taxAmount": 0,
+        "total": 30000,
+        "paidAmount": 10000,
+        "dueAmount": 20000,
+        "paymentAccountId": "6a8c8c999a76c6b095f949e6",
+        "paymentStatus": "PARTIAL",
+        "status": "COMPLETED",
+        "notes": null,
+        "saleDate": "2026-08-24T19:36:13.939Z",
+        "localId": "life-sale-1787600170657",
+        "deviceId": "6a8c9d2a9a76c6b095f9557e",
+        "createdAt": "2026-08-24T19:36:13.941Z",
+        "updatedAt": "2026-08-24T19:36:14.377Z",
+        "duplicate": true
+      }
+    },
+    "ms": 297
+  },
+  "sale-finalize": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "accountId is required when paidAmount > 0 (accountId)",
+        "fields": {
+          "accountId": [
+            "accountId is required when paidAmount > 0"
+          ]
+        }
+      }
+    },
+    "ms": 168
+  },
+  "sale-finalize-dup": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9d2d9a76c6b095f955cc",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "invoiceNo": "INV-2026-FA-SA-1787595929-0008",
+        "customerId": "6a8c8d219a76c6b095f94a4a",
+        "customerName": "FULLAUDIT-CUST-PATCH",
+        "items": [
+          {
+            "productId": "6a8c8cfc9a76c6b095f94a29",
+            "productName": "FULLAUDIT-PROD-PATCH",
+            "variantName": null,
+            "qty": 2,
+            "returnedQty": 0,
+            "unitPrice": 15000,
+            "costPrice": 10000,
+            "discountAmount": 0,
+            "taxAmount": 0,
+            "lineTotal": 30000
+          }
+        ],
+        "subtotal": 30000,
+        "discountAmount": 0,
+        "taxAmount": 0,
+        "total": 30000,
+        "paidAmount": 10000,
+        "dueAmount": 20000,
+        "paymentAccountId": "6a8c8c999a76c6b095f949e6",
+        "paymentStatus": "PARTIAL",
+        "status": "COMPLETED",
+        "notes": null,
+        "saleDate": "2026-08-24T19:36:13.939Z",
+        "localId": "life-sale-1787600170657",
+        "deviceId": "6a8c9d2a9a76c6b095f9557e",
+        "createdAt": "2026-08-24T19:36:13.941Z",
+        "updatedAt": "2026-08-24T19:36:14.377Z",
+        "duplicate": true
+      }
+    },
+    "ms": 292
+  },
+  "sale-payment": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "payment": {
+          "id": "6a8c9d309a76c6b095f95606",
+          "businessId": "6a8c8c779a76c6b095f949c7",
+          "shopId": "6a8c8c999a76c6b095f949e4",
+          "type": "customer_payment",
+          "customerId": "6a8c8d219a76c6b095f94a4a",
+          "supplierId": null,
+          "saleId": "6a8c9d2d9a76c6b095f955cc",
+          "purchaseId": null,
+          "amount": 2000,
+          "method": "CASH",
+          "accountId": "6a8c8c999a76c6b095f949e6",
+          "note": null,
+          "idempotencyKey": "sale-pay-1787600170657",
+          "paymentDate": "2026-08-24T19:36:16.188Z",
+          "localId": null,
+          "deviceId": "6a8c9d2a9a76c6b095f9557e"
+        },
+        "sale": {
+          "id": "6a8c9d2d9a76c6b095f955cc",
+          "businessId": "6a8c8c779a76c6b095f949c7",
+          "shopId": "6a8c8c999a76c6b095f949e4",
+          "invoiceNo": "INV-2026-FA-SA-1787595929-0008",
+          "customerId": "6a8c8d219a76c6b095f94a4a",
+          "customerName": "FULLAUDIT-CUST-PATCH",
+          "items": [
+            {
+              "productId": "6a8c8cfc9a76c6b095f94a29",
+              "productName": "FULLAUDIT-PROD-PATCH",
+              "variantName": null,
+              "qty": 2,
+              "returnedQty": 0,
+              "unitPrice": 15000,
+              "costPrice": 10000,
+              "discountAmount": 0,
+              "taxAmount": 0,
+              "lineTotal": 30000
+            }
+          ],
+          "subtotal": 30000,
+          "discountAmount": 0,
+          "taxAmount": 0,
+          "total": 30000,
+          "paidAmount": 12000,
+          "dueAmount": 18000,
+          "paymentAccountId": "6a8c8c999a76c6b095f949e6",
+          "paymentStatus": "PARTIAL",
+          "status": "COMPLETED",
+          "notes": null,
+          "saleDate": "2026-08-24T19:36:13.939Z",
+          "localId": "life-sale-1787600170657",
+          "deviceId": "6a8c9d2a9a76c6b095f9557e",
+          "createdAt": "2026-08-24T19:36:13.941Z",
+          "updatedAt": "2026-08-24T19:36:16.524Z"
+        },
+        "duplicate": false
+      }
+    },
+    "ms": 928
+  },
+  "sale-payments-list": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": [
+        {
+          "id": "6a8c9d309a76c6b095f95606",
+          "businessId": "6a8c8c779a76c6b095f949c7",
+          "shopId": "6a8c8c999a76c6b095f949e4",
+          "type": "customer_payment",
+          "customerId": "6a8c8d219a76c6b095f94a4a",
+          "supplierId": null,
+          "saleId": "6a8c9d2d9a76c6b095f955cc",
+          "purchaseId": null,
+          "amount": 2000,
+          "method": "CASH",
+          "accountId": "6a8c8c999a76c6b095f949e6",
+          "note": null,
+          "idempotencyKey": "sale-pay-1787600170657",
+          "paymentDate": "2026-08-24T19:36:16.188Z",
+          "localId": null,
+          "deviceId": "6a8c9d2a9a76c6b095f9557e"
+        }
+      ]
+    },
+    "ms": 295
+  },
+  "sale-return": {
+    "status": 201,
+    "body": {
+      "success": true,
+      "data": {
+        "id": "6a8c9d2d9a76c6b095f955cc",
+        "businessId": "6a8c8c779a76c6b095f949c7",
+        "shopId": "6a8c8c999a76c6b095f949e4",
+        "invoiceNo": "INV-2026-FA-SA-1787595929-0008",
+        "customerId": "6a8c8d219a76c6b095f94a4a",
+        "customerName": "FULLAUDIT-CUST-PATCH",
+        "items": [
+          {
+            "productId": "6a8c8cfc9a76c6b095f94a29",
+            "productName": "FULLAUDIT-PROD-PATCH",
+            "variantName": null,
+            "qty": 2,
+            "returnedQty": 0,
+            "unitPrice": 15000,
+            "costPrice": 10000,
+            "discountAmount": 0,
+            "taxAmount": 0,
+            "lineTotal": 30000
+          }
+        ],
+        "subtotal": 30000,
+        "discountAmount": 0,
+        "taxAmount": 0,
+        "total": 30000,
+        "paidAmount": 12000,
+        "dueAmount": 18000,
+        "paymentAccountId": "6a8c8c999a76c6b095f949e6",
+        "paymentStatus": "PARTIAL",
+        "status": "COMPLETED",
+        "notes": null,
+        "saleDate": "2026-08-24T19:36:13.939Z",
+        "localId": "life-sale-1787600170657",
+        "deviceId": "6a8c9d2a9a76c6b095f9557e",
+        "createdAt": "2026-08-24T19:36:13.941Z",
+        "updatedAt": "2026-08-24T19:36:16.524Z",
+        "duplicate": false
+      }
+    },
+    "ms": 2110
+  }
+}

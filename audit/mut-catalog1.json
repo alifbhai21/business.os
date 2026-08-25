@@ -1,0 +1,15 @@
+[
+  {"label": "biz-create", "method": "POST", "path": "/api/v1/businesses", "body": {"name": "AuditBiz-C-{{ts}}", "type": "retail", "currency": "BDT", "taxRate": 5}, "expect": 201},
+  {"label": "biz-update", "method": "PUT", "path": "/api/v1/businesses/6a8c8c779a76c6b095f949c7", "body": {"name": "FULLAUDIT-PATCHED", "customExpenseCategories": []}, "expect": 200},
+  {"label": "biz-patch", "method": "PATCH", "path": "/api/v1/businesses/6a8c8c779a76c6b095f949c7", "body": {"name": "FULLAUDIT-PATCHED"}, "expect": 200},
+  {"label": "biz-foreign-update", "method": "PUT", "path": "/api/v1/businesses/6a8a9f0b111bc81d5c19f02c", "body": {"name": "x"}, "expect": 404},
+  {"label": "biz-invalid", "method": "POST", "path": "/api/v1/businesses", "body": {"name": "", "type": "bogus"}, "expect": 400},
+  {"label": "shop-create", "method": "POST", "path": "/api/v1/shops", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "AuditShop-{{ts}}", "branchCode": "AU-{{ts}}", "openingCash": 30000}, "expect": 201},
+  {"label": "shop-dup", "method": "POST", "path": "/api/v1/shops", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "AuditShopDup", "branchCode": "FA-SA-1787595929"}, "expect": 409},
+  {"label": "shop-update", "method": "PUT", "path": "/api/v1/shops/6a8c8c999a76c6b095f949e4", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "FULLAUDIT-SHOPA-PATCH2"}, "expect": 200},
+  {"label": "shop-patch-status", "method": "PATCH", "path": "/api/v1/shops/6a8c8c999a76c6b095f949e4/status", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "status": "ACTIVE"}, "expect": 200},
+  {"label": "shop-foreign-create", "method": "POST", "path": "/api/v1/shops", "body": {"businessId": "6a8a9f0b111bc81d5c19f02c", "name": "Bad", "branchCode": "ZZ-1"}, "expect": 404},
+  {"label": "cat-create", "method": "POST", "path": "/api/v1/categories", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "AuditCat-{{ts}}"}, "expect": 201},
+  {"label": "cat-update", "method": "PUT", "path": "/api/v1/categories/6a8c8cbe9a76c6b095f94a0a", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "name": "FULLAUDIT-CAT"}, "expect": 200},
+  {"label": "cat-patch-status", "method": "PATCH", "path": "/api/v1/categories/6a8c8cbe9a76c6b095f94a0a/status", "body": {"businessId": "6a8c8c779a76c6b095f949c7", "status": "ACTIVE"}, "expect": 200}
+]
